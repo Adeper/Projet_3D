@@ -14,7 +14,7 @@ class Camera
 public: 
 
 	void init();
-	void reinitPos();
+	void transition(float _deltaTime);
 	void update(float _deltaTime, GLFWwindow* _window);
 	void updateInterface(float _deltaTime);
 	void updateFreeInput(float _deltaTime, GLFWwindow* _window);
@@ -38,6 +38,8 @@ private:
 	glm::vec3	m_front = VEC_FRONT;
 	glm::vec3	m_right = VEC_RIGHT;
 	glm::vec3	m_up = VEC_UP;
+	glm::vec3	m_front_horizontal = VEC_FRONT;
+	glm::vec3	m_right_horizontal = VEC_RIGHT;
 	glm::quat	m_rotation{};
 	float lastX = 0;
 	float lastY = 0;
@@ -46,6 +48,7 @@ private:
 	int		m_mode_axe_Horizontal{ -1 };
 	int		m_mode_axe_Vertical{ -1 };
 	bool	m_mode_free_cursor=false;
+	bool	m_inTransition=false;
 
 	//Interface option
 	bool m_showImguiDemo{ false };

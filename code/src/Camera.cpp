@@ -6,24 +6,44 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+glm::vec3	position_initial{ glm::vec3(0.f, 40.f, 0.f) };
+glm::vec3	euler_initial{ glm::vec3(0.f, 0.f, 0.f) };
+
+float dureeTransition = 5.;
+float tempsEcoule = 0.;
+
 
 void Camera::init()
 {
 	m_fovDegree = 45.0f;
 	m_speedTranslation = 10.0f;
 	m_speedRotation = 2.0f;
-	m_position = glm::vec3(0.f, 40.f, 0.f);
-	m_eulerAngle = glm::vec3(0.f, 0.f, 0.f);
+	m_position = position_initial;
+	m_eulerAngle = euler_initial;
 	m_front = VEC_FRONT;
 	m_right = VEC_RIGHT;
+	m_front_horizontal = VEC_FRONT;
+	m_right_horizontal = VEC_RIGHT;
 	m_up = VEC_UP;
 	m_rotation = glm::quat{};
 	m_mode = 0;
 	m_showImguiDemo = false;
 }
 
-void Camera::reinitPos(){
-	m_position = glm::vec3(0.f, 40.f, 0.f);
+void Camera::transition(float _deltaTime){
+	tempsEcoule += _deltaTime;
+	float ratio = Camera_Helper::interpolationCosinus(tempsEcoule / (dureeTransition * dureeTransition));
+
+	m_position = glm::mix(m_position, position_initial, ratio);
+
+	m_rotation = glm::slerp(m_rotation, glm::quat(glm::radians(euler_initial)), ratio);
+
+	m_eulerAngle = glm::degrees(glm::eulerAngles(m_rotation));
+
+	if (tempsEcoule >= dureeTransition) {
+		m_inTransition = false;
+		tempsEcoule = 0.;
+	}
 }
 
 void Camera::updateInterface(float _deltaTime)
@@ -43,26 +63,28 @@ void Camera::updateInterface(float _deltaTime)
 		ImGui::SliderFloat("vitesse rotation", &m_speedRotation, 0.0f, 5.0f);
 
 		ImGui::Text("Angle camera (%f %f %f)", m_eulerAngle.x, m_eulerAngle.y, m_eulerAngle.z);
-		ImGui::SliderFloat("pitch", &m_eulerAngle.x, -M_PI, M_PI);
-		ImGui::SliderFloat("yaw", &m_eulerAngle.y, -M_PI, M_PI);
-		ImGui::SliderFloat("roll", &m_eulerAngle.z, -M_PI, M_PI);
+		ImGui::SliderFloat("pitch", &m_eulerAngle.x, -180, 180);
+		ImGui::SliderFloat("yaw", &m_eulerAngle.y, -180, 180);
+		ImGui::SliderFloat("roll", &m_eulerAngle.z, -180, 180);
 
 		ImGui::Text("FOV %f", m_fovDegree);
 		ImGui::SliderFloat("FOV", &m_fovDegree, 1.0f, 179.0f);
 
-		ImGui::Text("Front (%f %f %f)", m_front.x, m_front.y, m_front.z);
-		ImGui::Text("Front worl (%f %f %f)", VEC_FRONT.x, VEC_FRONT.y, VEC_FRONT.z);
+		ImGui::Text("Duree transition %f", dureeTransition);
+		ImGui::SliderFloat("Duree transition", &dureeTransition, 1.0f, 20.0f);
+
+		ImGui::Text("tempsEcoule (%f)", tempsEcoule);
 
 		ImGui::Separator();
 		ImGui::Text(" === Les controles et modes ===");
 		ImGui::Text("Faire apparaitre/disparaitre le curseur : press left_Ctrl");
-		ImGui::Text("Mode : %d (press tab)", m_mode);
+		ImGui::Text("Changer Mode : %d (press left_Shift)", m_mode);
 		ImGui::Text("Inversion axe X : %d (press 1)", m_mode_axe_Horizontal);
 		ImGui::Text("Inversion axe Y : %d (press 2)", m_mode_axe_Vertical);
 
 		ImGui::Separator();
-		if (ImGui::Button("Réinitialisation (Position)"))
-    		reinitPos();
+		if (ImGui::Button("Réinitialisation (press r)"))
+    		m_inTransition = true;
 		ImGui::Separator();
 		if (ImGui::Button("Réinitialisation (Tout)"))
     		init();
@@ -77,19 +99,29 @@ void Camera::updateInterface(float _deltaTime)
 }
 
 //for toggles (to prevent when the key stays down)
-bool isTabRealised = false;
+bool isLeftShiftRealised = false;
 bool isLeftControlRealised = false;
 bool isOneRealised = false;
 bool isTwoRealised = false;
+bool isRRealised = false;
 void Camera::updateFreeInput(float _deltaTime, GLFWwindow* _window)
 {
 	//Toggle mode
-	if (glfwGetKey( _window, GLFW_KEY_TAB ) == GLFW_PRESS && !isTabRealised){
+	if (glfwGetKey( _window, GLFW_KEY_LEFT_SHIFT ) == GLFW_PRESS && !isLeftShiftRealised){
 		m_mode = (m_mode + 1)%2;
-		isTabRealised = true;
+		isLeftShiftRealised = true;
 	}
-	if(glfwGetKey( _window, GLFW_KEY_TAB ) == GLFW_RELEASE){
-		isTabRealised = false;
+	if(glfwGetKey( _window, GLFW_KEY_LEFT_SHIFT ) == GLFW_RELEASE){
+		isLeftShiftRealised = false;
+	}
+
+	//transition
+	if (glfwGetKey( _window, GLFW_KEY_R ) == GLFW_PRESS && !isRRealised){
+		m_inTransition = true;
+		isRRealised = true;
+	}
+	if(glfwGetKey( _window, GLFW_KEY_R ) == GLFW_RELEASE){
+		isRRealised = false;
 	}
 
 	// Switch between visible or hidden cursor
@@ -124,65 +156,76 @@ void Camera::updateFreeInput(float _deltaTime, GLFWwindow* _window)
 		isTwoRealised = false;
 	}
 
-	// Move forward
-	if (glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS){
-		m_position += m_front * _deltaTime * m_speedTranslation;
-	}
-	// Move backward
-	if (glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS){
-		m_position -= m_front * _deltaTime * m_speedTranslation;
-	}
-	// Strafe right
-	if (glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS){
-		m_position += m_right * _deltaTime * m_speedTranslation;
-	}
-	// Strafe left
-	if (glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS){
-		m_position -= m_right * _deltaTime * m_speedTranslation;
-	}
-
 	if(!m_mode_free_cursor){
 		if(m_mode == 0){
 			mouseRotation(_deltaTime, _window);
 
-		}/*else if(m_mode == 1){
-			keybordRotation(_deltaTime, _window);
-
-			// Move up
-			if (glfwGetKey( _window, GLFW_KEY_E ) == GLFW_PRESS){
-				m_position += up * _deltaTime * m_speedTranslation;
+			// Move forward
+			if (glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS){
+				m_position += m_front * _deltaTime * m_speedTranslation;
 			}
-			// Move down
-			if (glfwGetKey( _window, GLFW_KEY_Q ) == GLFW_PRESS){
-				m_position -= up * _deltaTime * m_speedTranslation;
+			// Move backward
+			if (glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS){
+				m_position -= m_front * _deltaTime * m_speedTranslation;
+			}
+			// Strafe right
+			if (glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS){
+				m_position += m_right * _deltaTime * m_speedTranslation;
+			}
+			// Strafe left
+			if (glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS){
+				m_position -= m_right * _deltaTime * m_speedTranslation;
+			}
+
+		}else if(m_mode == 1){
+			// Move forward
+			if (glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS){
+				m_position += m_front_horizontal * _deltaTime * m_speedTranslation;
+			}
+			// Move backward
+			if (glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS){
+				m_position -= m_front_horizontal * _deltaTime * m_speedTranslation;
+			}
+			// Strafe right
+			if (glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS){
+				m_position += m_right_horizontal * _deltaTime * m_speedTranslation;
+			}
+			// Strafe left
+			if (glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS){
+				m_position -= m_right_horizontal * _deltaTime * m_speedTranslation;
 			}
 
 			// pitch up
 			if (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){
-				pos_cursor_vertical += 10;
+				m_eulerAngle.x += 5. * m_speedRotation * _deltaTime * m_mode_axe_Vertical;
 			}
 			// pitch down
 			if (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){
-				pos_cursor_vertical -= 10;
+				m_eulerAngle.x -= 5. * m_speedRotation * _deltaTime * m_mode_axe_Vertical;
 			}
-
 			// yaw right
 			if (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){
-				pos_cursor_horizontal += 10;
+				m_eulerAngle.y += 5. * m_speedRotation * _deltaTime * m_mode_axe_Horizontal;
 			}
 			// yaw left
 			if (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){
-				pos_cursor_horizontal -= 10;
+				m_eulerAngle.y -= 5. * m_speedRotation * _deltaTime * m_mode_axe_Horizontal;
 			}
-		}*/
+		}
 	}
 }
 
 void Camera::updateFontRightUp(){
+	m_eulerAngle.y = Camera_Helper::clipAngle180(m_eulerAngle.y);
+
+	if(m_eulerAngle.x > 90.)
+		m_eulerAngle.x = 90.;
+	if(m_eulerAngle.x < -90.)
+		m_eulerAngle.x = -90.;
 	
-    m_front.x = glm::sin(m_eulerAngle.y) * glm::cos(m_eulerAngle.x);
-    m_front.y = -glm::sin(m_eulerAngle.x);
-    m_front.z = glm::cos(m_eulerAngle.y) * glm::cos(m_eulerAngle.x);
+    m_front.x = glm::sin(glm::radians(m_eulerAngle.y)) * glm::cos(glm::radians(m_eulerAngle.x));
+    m_front.y = -glm::sin(glm::radians(m_eulerAngle.x));
+    m_front.z = glm::cos(glm::radians(m_eulerAngle.y)) * glm::cos(glm::radians(m_eulerAngle.x));
 
 	m_front = glm::normalize(m_front);
 	
@@ -191,14 +234,28 @@ void Camera::updateFontRightUp(){
 	m_up = glm::normalize(glm::cross(m_right, m_front));
 
 	m_right = glm::normalize(glm::cross(m_front, m_up));
+
+	// front et right pour camera 2
+	m_front_horizontal.x = m_front.x;
+	m_front_horizontal.y = 0.;
+	m_front_horizontal.z = m_front.z;
+
+	m_front_horizontal = glm::normalize(m_front_horizontal);
+
+	m_right_horizontal = glm::normalize(glm::cross(m_front_horizontal, VEC_UP));
+	m_right_horizontal = glm::normalize(glm::cross(m_front_horizontal, glm::normalize(glm::cross(m_right_horizontal, m_front_horizontal))));
 }
 
 void Camera::update(float _deltaTime, GLFWwindow* _window)
 {
 	updateInterface(_deltaTime);
-	updateFreeInput(_deltaTime, _window);
+	if(!m_inTransition)
+		updateFreeInput(_deltaTime, _window);
+	else
+		transition(_deltaTime);
 
-	m_rotation = glm::quat(m_eulerAngle);
+	updateFontRightUp();
+	m_rotation = glm::quat(glm::radians(m_eulerAngle));
 
 	Camera_Helper::computeFinalView(m_projectionMatrix, m_viewMatrix, m_position, m_rotation, m_fovDegree);
 }
@@ -215,26 +272,6 @@ void Camera::mouseRotation(float _deltaTime, GLFWwindow* window){
 	offset_horizontal *= m_speedRotation * _deltaTime;
 	offset_vertical *= m_speedRotation * _deltaTime;
 
-	m_eulerAngle.x += glm::radians(offset_vertical * m_mode_axe_Vertical); //pitch
-	m_eulerAngle.y += glm::radians(offset_horizontal * m_mode_axe_Horizontal); //yaw
-
-	updateFontRightUp();
+	m_eulerAngle.x += offset_vertical * m_mode_axe_Vertical; //pitch
+	m_eulerAngle.y += offset_horizontal * m_mode_axe_Horizontal; //yaw
 }
-
-/*void Camera::keybordRotation(float _deltaTime, GLFWwindow* window){
-	double offset_horizontal = pos_cursor_horizontal - lastX;
-	double offset_vertical = lastY - pos_cursor_vertical;
-	lastX = pos_cursor_horizontal;
-	lastY = pos_cursor_vertical;
-
-	offset_horizontal *= m_speedRotation * _deltaTime;
-	offset_vertical *= m_speedRotation * _deltaTime;
-
-	if(offset_vertical > 89.0f)
-        offset_vertical = 89.0f;
-    if(offset_vertical < -89.0f)
-        offset_vertical = -89.0f;
-
-	m_eulerAngle.x += glm::radians(offset_vertical * m_mode_axe_Vertical); //pitch
-	m_eulerAngle.y += glm::radians(offset_horizontal * m_mode_axe_Horizontal); //yaw
-}*/

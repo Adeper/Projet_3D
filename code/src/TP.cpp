@@ -66,7 +66,7 @@ int main(void)
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
-    GLuint programID = LoadShaders("../shaders/vertex_shader.glsl", "../shaders/fragment_shader.glsl");
+    GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
     GLuint MatrixID = glGetUniformLocation(programID, "MVP");
     GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
     GLuint ModelMatrixID = glGetUniformLocation(programID, "M");

@@ -20,5 +20,7 @@ class Camera_Helper
 public: 
 	static glm::vec3 quatToEuler(glm::quat _quat);
 	static void computeFinalView(glm::mat4& _outProjectionMatrix, glm::mat4& _outviewMatrix, glm::vec3& _position, glm::quat _rotation, float _fovDegree);
-
+	static glm::vec3 ProjectVectorOnPlan(const glm::vec3& vector, const glm::vec3& normal_plan);
+	static float clipAngle180(float angle);
+	static float interpolationCosinus(float ratio);
 };

@@ -50,3 +50,26 @@ void Camera_Helper::computeFinalView(glm::mat4& _outProjectionMatrix, glm::mat4&
 	// Camera matrix
 	_outviewMatrix = glm::lookAt(_position, _position + front, up);
 }
+
+glm::vec3 Camera_Helper::ProjectVectorOnPlan(const glm::vec3& vector, const glm::vec3& normal_plan) {
+    glm::vec3 normal_plan_normalized = glm::normalize(normal_plan);
+
+    float dot_product = glm::dot(vector, normal_plan_normalized);
+
+    glm::vec3 parallel_component = dot_product * normal_plan_normalized;
+
+    glm::vec3 vecteur_projection = vector - parallel_component;
+
+    return vecteur_projection;
+}
+
+float Camera_Helper::clipAngle180(float angle) {
+    angle = fmod(angle, 360.0f);
+    angle = angle >= 180.0f ? angle - 360.0f : (angle < -180.0f ? angle + 360.0f : angle);
+
+    return angle;
+}
+
+float Camera_Helper::interpolationCosinus(float ratio) {
+    return 0.5f - 0.5f * std::cos(ratio * M_PI);
+}
