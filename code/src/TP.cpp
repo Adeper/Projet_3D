@@ -13,48 +13,30 @@ GLFWwindow* window;
 
 // Include GLM
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
 
-// Include GLM
+// Include ImGui
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-// Include TP
-#include <Actor.hpp>
-#include <ObjController.hpp>
-#include "../include/Camera.hpp"
-
-using namespace glm;
-
-#include <shader.hpp>
-#include <objloader.hpp>
-#include <vboindexer.hpp>
-#include <texture.hpp>
-
-#ifdef _WINDOWS
-
-#include <windows.h>
-#else
-#include <unistd.h>
-#define Sleep(x) usleep((x)*1000)
-#endif
-
-// settings
+// Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-// timing
-float deltaTime = 0.0f;	// time between current frame and last frame
-float lastFrame = 0.0f;
-
 bool globalInit();
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow();
-void windowSetup();
 void initImgui();
-void updateLightPosition(GLuint _lightID);
+
+// Paramètres du bruit 
+int noiseType = 0; // 0 = Perlin, 1 = Simplex, 2 = Coherent, 3 = Diamond Square
+float scale = 1.0f; // Echelle du bruit
+float gain = 0.5f; // Gain du bruit
+int octaves = 4; // Nombre d'octaves
+float persistence = 2.0f; // Persistance du bruit
+float power = 1.0f; // Puissance du bruit
+int seed = 0; // Graine du bruit
+bool regenerate = false; // Regénérer le bruit
+
 
 int main(void)
 {
@@ -62,88 +44,66 @@ int main(void)
     {
         return -1;
     }
-    
-    GLuint VertexArrayID;
-    glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);
-    GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-    GLuint MatrixID = glGetUniformLocation(programID, "MVP");
-    GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
-    GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
-    GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
-    GLuint colorID = glGetUniformLocation(programID, "color_Mesh");
-
-    /****************************************/  
-
-
-    //Chargement du fichier de maillage
-    ObjController map;
-    Actor target;
-
-    map.loadObj("../data/myMap2.obj", glm::vec3(0.6f, 0.5f, 0.3f), colorID);
-    target.load("../data/cameraTarget.obj", glm::vec3(0.8f, 0.5f, 0.4f), colorID);
-
-
-    glUseProgram(programID);
 
     // Init ImGUI
     initImgui();
-
-    // Init Camera
-    Camera myCamera;
-    //[Camera] Aller plus loin : loader une position, rotation et fov ?
-    myCamera.init();
-
-    // For speed computation
-    double lastTime = glfwGetTime();
-    int nbFrames = 0;
-
-    //VSync - avoid having 3000 fps
-    glfwSwapInterval(1);
-
-
     
-    /*__________________UPDATE__________________*/
     do {
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-
-        //input
 
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Use our shader
-        glUseProgram(programID);
 
         //Imgui 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Update
-        target.update(deltaTime, window, myCamera.getRotation());
-        myCamera.update(deltaTime, window);
+        // Fenêtre de réglage du bruit
+        ImGui::SetNextWindowSize(ImVec2(1000, 800), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Paramètres du bruit");
 
+        const char* noiseTypes[] = { "Perlin", "Simplex", "Coherent", "Diamond Square" };
+        ImGui::Combo("Type de bruit", &noiseType, noiseTypes, IM_ARRAYSIZE(noiseTypes));
+        ImGui::SliderFloat("Echelle", &scale, 0.0f, 10.0f);
+        ImGui::SliderFloat("Gain", &gain, 0.0f, 1.0f);
+        ImGui::SliderInt("Octaves", &octaves, 1, 10);
+        ImGui::SliderFloat("Persistance", &persistence, 0.0f, 10.0f);
+        ImGui::SliderFloat("Puissance", &power, 0.0f, 10.0f);
 
-        glm::mat4 viewMatrix = myCamera.getViewMatrix();
-        glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
+        if (ImGui::Button("Regénérer"))
+        {
+            seed = rand();
+            regenerate = true;
+        }
 
-        //View
-        updateLightPosition(LightID);
+        ImGui::SameLine();
+        ImGui::Text("Seed : %d", seed);
 
-        map.updateViewAndDraw(myCamera, MatrixID, ModelMatrixID);
-        target.updateViewAndDraw(myCamera, MatrixID, ModelMatrixID); 
+        ImGui::End();
+
+        // Fenêtre de visualisation du bruit
+        ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Visualisation du bruit");
+
+        // Affichage de l'aperçu du bruit (Placeholder pour le moment)
+        ImGui::Text("Aperçu du bruit généré ici...");
+        ImGui::Image((void*)(intptr_t)0, ImVec2(200, 200));
+
+        if (ImGui::Button("Importer"))
+        {
+            // Importer le bruit
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Exporter"))
+        {
+            // Exporter le bruit
+        }
+
+        ImGui::End();
 
         // Renders the ImGUI elements
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(2);
-
 
         // Swap buffers
         glfwSwapBuffers(window);
@@ -158,13 +118,6 @@ int main(void)
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    // Cleanup VBO and shader
-
-    glDeleteProgram(programID);
-    //glDeleteTextures(1, &Texture);
-    glDeleteVertexArrays(1, &VertexArrayID);
-    map.deleteBuffer();
-    target.destroy();
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
 
@@ -198,15 +151,9 @@ bool globalInit()
         return false;
     }
 
-    windowSetup();
-    return true;
-}
+    glClearColor(0.8f, 0.8f, 0.8f, 0.0f);
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    // make sure the viewport matches the new window dimensions; note that width and
-    // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
+    return true;
 }
 
 GLFWwindow* initWindow()
@@ -219,37 +166,14 @@ GLFWwindow* initWindow()
 
 
     // Open a window and create its OpenGL context
-    GLFWwindow* createdWindow = glfwCreateWindow(1500, 1000, "TP Camera", NULL, NULL);
+    GLFWwindow* createdWindow = glfwCreateWindow(1500, 1000, "Projet 3D", NULL, NULL);
     if (createdWindow != NULL) {
         glfwMakeContextCurrent(createdWindow);
-        glfwSetFramebufferSizeCallback(createdWindow, framebuffer_size_callback);
     }
 
     return createdWindow;
 }
 
-void windowSetup()
-{
-    // Ensure we can capture the escape key being pressed below
-    glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-    // Hide the mouse and enable unlimited mouvement
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    // Set the mouse at the center of the screen
-    glfwPollEvents();
-    //glfwSetCursorPos(window, 1024 / 2, 768 / 2);
-
-    // Dark blue background
-    glClearColor(0.8f, 0.8f, 0.8f, 0.0f);
-
-    // Enable depth test
-    glEnable(GL_DEPTH_TEST);
-    // Accept fragment if it closer to the camera than the former one
-    glDepthFunc(GL_LESS);
-
-    // Cull triangles which normal is not towards the camera
-    glEnable(GL_CULL_FACE);
-}
 
 void initImgui()
 {
@@ -259,10 +183,4 @@ void initImgui()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-}
-
-void updateLightPosition(GLuint _lightID)
-{
-    const glm::vec3 lightPos = glm::vec3(4.f, 90.f, 4.f);
-    glUniform3f(_lightID, lightPos.x, lightPos.y, lightPos.z);
 }
