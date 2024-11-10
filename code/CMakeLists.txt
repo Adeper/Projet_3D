@@ -52,7 +52,11 @@ add_definitions(
 set(SHADERS
     shaders/vertex_shader.glsl
     shaders/fragment_shader.glsl
-    shaders/noise.glsl
+    shaders/noise_compute.glsl
+    shaders/noise_fragment.glsl
+    shaders/noise_vertex.glsl
+    shaders/screen_fragment.glsl
+    shaders/screen_vertex.glsl
 )
 
 # Fichiers ImGui

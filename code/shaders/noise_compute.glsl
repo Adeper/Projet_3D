@@ -1,4 +1,4 @@
-#version 330 core
+#version 430
 
 layout (local_size_x = 4, local_size_y = 4) in;
 layout (rgba32f, binding = 0) uniform image2D noiseTexture;

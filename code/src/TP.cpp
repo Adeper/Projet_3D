@@ -21,6 +21,9 @@ GLFWwindow* window;
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+// Include shaders
+#include <shader.hpp>
+
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -28,9 +31,13 @@ const unsigned int SCR_HEIGHT = 600;
 bool globalInit();
 GLFWwindow* initWindow();
 void initImgui();
-GLuint loadComputeShader(const char* shaderPath);
-GLuint createComputeProgram();
-GLuint computeProgram, noiseTexture;
+
+GLuint computeNoiseProgram, vertexNoiseProgram, fragmentNoiseProgram;
+GLuint noiseTexture; 
+GLuint noiseFramebuffer, quadVAO, quadVBO;
+GLuint screenShader;
+
+bool useComputeShader;
 
 // Paramètres du bruit 
 int noiseType = 0; // 0 = Perlin, 1 = Simplex, 2 = Coherent, 3 = Diamond Square
@@ -53,13 +60,66 @@ int main(void)
     // Init ImGUI
     initImgui();
 
-    // Charger et compiler le compute shader
-    computeProgram = createComputeProgram();
+    // Charger les shaders
+    if (glewIsSupported("GL_VERSION_4_3")) {
+        computeNoiseProgram = loadComputeShader("noise_compute.glsl");
+        useComputeShader = true;
+        std::cout << "Utilisation du compute shader pour le bruit" << std::endl;
+        
+        // Création de la texture de bruit
+        glGenTextures(1, &noiseTexture);
+        glBindTexture(GL_TEXTURE_2D, noiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 200, 200, 0, GL_RGBA, GL_FLOAT, nullptr); 
 
-    // Création de la texture de bruit
-    glGenTextures(1, &noiseTexture);
-    glBindTexture(GL_TEXTURE_2D, noiseTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 100, 100, 0, GL_RGBA, GL_FLOAT, nullptr); 
+    } else {
+        vertexNoiseProgram = loadVertexShader("noise_vertex.glsl");
+        fragmentNoiseProgram = loadFragmentShader("noise_fragment.glsl");
+
+        useComputeShader = false;
+        std::cout << "Utilisation du fragment shader pour le bruit" << std::endl;
+
+        // Créez un framebuffer pour dessiner la texture de bruit
+        GLuint noiseFramebuffer;
+        glGenFramebuffers(1, &noiseFramebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
+
+        // Créez une texture cible pour le framebuffer
+        glGenTextures(1, &noiseTexture);
+        glBindTexture(GL_TEXTURE_2D, noiseTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 200, 200, 0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, noiseTexture, 0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cerr << "Erreur: Framebuffer incomplet !" << std::endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0); // Débind le framebuffer pour l'instant
+
+        // Configurez les données de sommets pour un quad couvrant tout l'écran
+        float quadVertices[] = {
+            // positions   // texCoords
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f,  0.0f, 0.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f, 1.0f
+        };
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+ 
+    }
+    // Charger le shader d'affichage pour afficher la texture de bruit à l'écran
+    screenShader = LoadShaders("screen_vertex.glsl", "screen_fragment.glsl");
     
     do {
 
@@ -72,7 +132,7 @@ int main(void)
         ImGui::NewFrame();
 
         // Fenêtre de réglage du bruit
-        ImGui::SetNextWindowSize(ImVec2(1000, 800), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("Paramètres du bruit");
 
         const char* noiseTypes[] = { "Perlin", "Simplex", "Coherent", "Diamond Square" };
@@ -86,24 +146,45 @@ int main(void)
         if (ImGui::Button("Générer"))
         {
             seed = rand();
-            glUseProgram(computeProgram);
 
-            // Envoi des paramètres du bruit au compute shader
-            glUniform1i(glGetUniformLocation(computeProgram, "noiseType"), noiseType);
-            glUniform1f(glGetUniformLocation(computeProgram, "noiseScale"), scale);
-            glUniform1f(glGetUniformLocation(computeProgram, "noiseGain"), gain);
-            glUniform1i(glGetUniformLocation(computeProgram, "noiseOctaves"), octaves);
-            glUniform1f(glGetUniformLocation(computeProgram, "noisePersistence"), persistence);
-            glUniform1f(glGetUniformLocation(computeProgram, "noisePower"), power);
-            glUniform1i(glGetUniformLocation(computeProgram, "seed"), seed);
+            if (useComputeShader){
+                glUseProgram(computeNoiseProgram);
+                
+                // Envoie des paramètres du bruit au compute shader
+                glUniform1i(glGetUniformLocation(computeNoiseProgram, "noiseType"), noiseType);
+                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noiseScale"), scale);
+                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noiseGain"), gain);
+                glUniform1i(glGetUniformLocation(computeNoiseProgram, "noiseOctaves"), octaves);
+                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noisePersistence"), persistence);
+                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noisePower"), power);
+                glUniform1i(glGetUniformLocation(computeNoiseProgram, "seed"), seed);
 
-            // Lancer le compute shader
-            glActiveTexture(GL_TEXTURE0);
-            glBindImageTexture(0, noiseTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-            glDispatchCompute(25, 25, 1);
-            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-            glDispatchCompute(25, 25, 1);  // 100 / 4 = 25 groupes de travail
-            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+                // Bind la texture de bruit
+                glBindImageTexture(0, noiseTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+                glDispatchCompute(25, 25, 1);
+                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+            }
+            else
+            {
+                // Utilisation du fragment shader pour générer la texture de bruit
+                glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
+                glViewport(0, 0, 200, 200); // Ajustez la vue au cadre de la texture
+
+                glUseProgram(fragmentNoiseProgram);
+                glUniform1i(glGetUniformLocation(fragmentNoiseProgram, "noiseType"), noiseType);
+                glUniform1f(glGetUniformLocation(fragmentNoiseProgram, "noiseScale"), scale);
+                glUniform1f(glGetUniformLocation(fragmentNoiseProgram, "noiseGain"), gain);
+                glUniform1i(glGetUniformLocation(fragmentNoiseProgram, "noiseOctaves"), octaves);
+                glUniform1f(glGetUniformLocation(fragmentNoiseProgram, "noisePersistence"), persistence);
+                glUniform1f(glGetUniformLocation(fragmentNoiseProgram, "noisePower"), power);
+                glUniform1i(glGetUniformLocation(fragmentNoiseProgram, "seed"), seed);
+
+                glBindVertexArray(quadVAO);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                glBindFramebuffer(GL_FRAMEBUFFER, 0); // Retour à l'écran principal
+                glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT); // Réinitialisez la vue
+            }
 
             regenerate = false;
         }
@@ -112,6 +193,22 @@ int main(void)
         ImGui::Text("Seed : %d", seed);
 
         ImGui::End();
+
+        // Bind the default framebuffer to display to the screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0); // Revenir au framebuffer par défaut (écran)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Nettoyer l'écran
+
+        // Utiliser le shader d'affichage (celui qui affiche la texture générée)
+        glUseProgram(screenShader); 
+        glUniform1i(glGetUniformLocation(screenShader, "noiseTexture"), 0); // Associer l'uniforme "noiseTexture" à l'unité de texture 0
+
+        // Activer l'unité de texture 0 et lier la texture de bruit générée
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, noiseTexture); 
+
+        // Dessiner le quad plein écran avec la texture de bruit
+        glBindVertexArray(quadVAO); 
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // Fenêtre de visualisation du bruit
         ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
@@ -150,6 +247,15 @@ int main(void)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+
+    if (useComputeShader){
+        glDeleteProgram(computeNoiseProgram);
+    }
+    else{
+        glDeleteProgram(vertexNoiseProgram);
+        glDeleteProgram(fragmentNoiseProgram);
+    }
+    glDeleteProgram(screenShader); // Ajout pour supprimer screenShader
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
@@ -204,6 +310,8 @@ GLFWwindow* initWindow()
         glfwMakeContextCurrent(createdWindow);
     }
 
+    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+
     return createdWindow;
 }
 
@@ -218,71 +326,4 @@ void initImgui()
     ImGui_ImplOpenGL3_Init("#version 330");
 }
 
-GLuint loadComputeShader(const char* shaderPath){
-    // 1. Charger le code GLSL du fichier
-    std::ifstream shaderFile(shaderPath);
-    if (!shaderFile.is_open()) {
-        std::cerr << "Erreur : impossible d'ouvrir le fichier " << shaderPath << std::endl;
-        return 0;
-    }
-    std::stringstream shaderStream;
-    shaderStream << shaderFile.rdbuf();
-    std::string shaderCode = shaderStream.str();
-    const char* shaderSource = shaderCode.c_str();
-    shaderFile.close();
 
-    // 2. Créer et compiler le shader
-    GLuint shaderID = glCreateShader(GL_COMPUTE_SHADER);
-    glShaderSource(shaderID, 1, &shaderSource, nullptr);
-    glCompileShader(shaderID);
-
-    // 3. Vérifier les erreurs de compilation
-    GLint success;
-    glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLint logLength;
-        glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &logLength);
-        std::vector<char> errorLog(logLength);
-        glGetShaderInfoLog(shaderID, logLength, nullptr, errorLog.data());
-        std::cerr << "Erreur de compilation du compute shader : " << errorLog.data() << std::endl;
-        std::cout << std::endl;
-        glDeleteShader(shaderID);
-        return 0;
-    }
-
-    return shaderID;
-
-}
-
-GLuint createComputeProgram() {
-    // Charger et compiler le compute shader
-    GLuint computeShader = loadComputeShader("noise.glsl");
-    if (computeShader == 0) {
-        return 0;
-    }
-
-    // Créer le programme et lier le shader
-    GLuint computeProgram = glCreateProgram();
-    glAttachShader(computeProgram, computeShader);
-    glLinkProgram(computeProgram);
-
-    // Vérifier les erreurs de linkage
-    GLint success;
-    glGetProgramiv(computeProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        GLint logLength;
-        glGetProgramiv(computeProgram, GL_INFO_LOG_LENGTH, &logLength);
-        std::vector<char> errorLog(logLength);
-        glGetProgramInfoLog(computeProgram, logLength, nullptr, errorLog.data());
-        std::cerr << "Erreur de linkage du programme compute shader : " << errorLog.data() << std::endl;
-        std::cout << std::endl;
-        glDeleteProgram(computeProgram);
-        glDeleteShader(computeShader);
-        return 0;
-    }
-
-    // Le shader peut être détaché et supprimé après le linkage
-    glDeleteShader(computeShader);
-
-    return computeProgram;
-}
