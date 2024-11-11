@@ -55,8 +55,6 @@ set(SHADERS
     shaders/noise_compute.glsl
     shaders/noise_fragment.glsl
     shaders/noise_vertex.glsl
-    shaders/screen_fragment.glsl
-    shaders/screen_vertex.glsl
 )
 
 # Fichiers ImGui
