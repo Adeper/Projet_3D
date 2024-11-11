@@ -114,7 +114,16 @@ int main(void)
         ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("Paramètres du bruit");
 
-        const char* noiseTypes[] = { "Perlin", "Simplex", "Coherent", "Diamond Square" };
+        const char* noiseTypes[] = { "Bruit par défaut", "Perlin", "Simplex", "Coherent", "Diamond Square" };
+        
+        static int previousNoiseType = noiseType;
+        static float previousScale = scale;
+        static float previousGain = gain;
+        static int previousOctaves = octaves;
+        static float previousPersistence = persistence;
+        static float previousPower = power;
+
+        // Les sliders et le combo pour ajuster les paramètres
         ImGui::Combo("Type de bruit", &noiseType, noiseTypes, IM_ARRAYSIZE(noiseTypes));
         ImGui::SliderFloat("Echelle", &scale, 1.0f, 100.0f);
         ImGui::SliderFloat("Gain", &gain, 0.0f, 1.0f);
@@ -122,11 +131,17 @@ int main(void)
         ImGui::SliderFloat("Persistance", &persistence, 0.3f, 0.7f);
         ImGui::SliderFloat("Puissance", &power, 1.0f, 10.0f);
 
-        if (ImGui::Button("Générer"))
-        {
-            seed = rand();
+        // Détection des changements de paramètres
+        bool hasChanged = (noiseType != previousNoiseType ||
+                        scale != previousScale ||
+                        gain != previousGain ||
+                        octaves != previousOctaves ||
+                        persistence != previousPersistence ||
+                        power != previousPower);
 
-            if (useComputeShader){
+        if (hasChanged || regenerate) {
+            // Mettre à jour la texture en fonction des paramètres actuels
+            if (useComputeShader) {
                 glUseProgram(computeNoiseProgram);
                 glUniform1i(glGetUniformLocation(computeNoiseProgram, "noiseType"), noiseType);
                 glUniform1f(glGetUniformLocation(computeNoiseProgram, "noiseScale"), scale);
@@ -138,8 +153,7 @@ int main(void)
 
                 glDispatchCompute(width / 16, height / 16, 1);
                 glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-            }
-            else{
+            } else {
                 glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
                 glUseProgram(noiseFragmentProgram);
 
@@ -156,29 +170,42 @@ int main(void)
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
             }
 
+            // Mise à jour de l'état des sliders
+            previousNoiseType = noiseType;
+            previousScale = scale;
+            previousGain = gain;
+            previousOctaves = octaves;
+            previousPersistence = persistence;
+            previousPower = power;
+
             regenerate = false;
         }
-
+        if (ImGui::Button("Regénérer")) {
+            regenerate = true;
+            seed = rand();
+        }
         ImGui::SameLine();
         ImGui::Text("Seed : %d", seed);
         ImGui::End();
 
+        // Fenêtre pour l'aperçu du bruit
         ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("Visualisation du bruit");
         ImGui::Text("Aperçu du bruit généré ici...");
         ImGui::Image((void*)(intptr_t)noiseTexture, ImVec2(200, 200));
 
-        if (ImGui::Button("Importer"))
-        {
+        // Boutons pour importer/exporter
+        if (ImGui::Button("Importer")) {
             // Code d'importation
         }
         ImGui::SameLine();
-        if (ImGui::Button("Exporter"))
-        {
+        if (ImGui::Button("Exporter")) {
             // Code d'exportation
         }
 
         ImGui::End();
+
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -186,7 +213,7 @@ int main(void)
         glfwPollEvents();
 
     } while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
-        glfwWindowShouldClose(window) == 0);
+            glfwWindowShouldClose(window) == 0);
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
