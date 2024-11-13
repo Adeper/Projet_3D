@@ -62,9 +62,14 @@ int main(void)
 
     initImgui();
 
-    if (glewIsSupported("GL_VERSION_4_3")) {
+    int major, minor;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+
+    if (major > 4 || (major == 4 && minor >= 3))  {
         computeNoiseProgram = loadComputeShader("noise_compute.glsl");
         useComputeShader = true;
+        std::cout << "OpenGL est au moins en version 4.3" << std::endl;
         std::cout << "Utilisation du compute shader pour le bruit" << std::endl;
 
         glGenTextures(1, &noiseTexture);
@@ -81,6 +86,7 @@ int main(void)
     } else {
         noiseFragmentProgram = LoadShaders("noise_vertex.glsl", "noise_fragment.glsl");
         useComputeShader = false;
+        std::cerr << "OpenGL est inférieur à la version 4.3" << std::endl;
         std::cout << "Utilisation du fragment shader pour le bruit" << std::endl;
         setUPVAOVBO();
 
@@ -128,7 +134,7 @@ int main(void)
         ImGui::SliderFloat("Echelle", &scale, 1.0f, 100.0f);
         ImGui::SliderFloat("Gain", &gain, 0.0f, 1.0f);
         ImGui::SliderInt("Octaves", &octaves, 1, 10);
-        ImGui::SliderFloat("Persistance", &persistence, 0.3f, 0.7f);
+        ImGui::SliderFloat("Persistance", &persistence, 0.3f, 2.0f);
         ImGui::SliderFloat("Puissance", &power, 1.0f, 10.0f);
 
         // Détection des changements de paramètres
@@ -192,7 +198,7 @@ int main(void)
         ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
         ImGui::Begin("Visualisation du bruit");
         ImGui::Text("Aperçu du bruit généré ici...");
-        ImGui::Image((void*)(intptr_t)noiseTexture, ImVec2(200, 200));
+        ImGui::Image((void*)(intptr_t)noiseTexture, ImVec2(400, 400));
 
         // Boutons pour importer/exporter
         if (ImGui::Button("Importer")) {
@@ -270,7 +276,7 @@ bool globalInit()
 GLFWwindow* initWindow()
 {
     glfwWindowHint(GLFW_SAMPLES, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); // à changer si OpenGL inférieur à 4.3
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

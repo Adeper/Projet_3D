@@ -2,8 +2,10 @@
 out vec4 FragColor;
 in vec2 TexCoords;
 
+/* COMPARAISON DES DIFFERENTS BRUITS DE PERLIN*/
+
 // Paramètres du bruit
-uniform int noiseType;           // Type de bruit: 0 = Perlin, 1 = Simplex, 2 = Cohérent, 3 = Diamond-Square
+uniform int noiseType;           // Type de bruit: 0 = Perlin simple, 1 = Simplex, 2 = Cohérent, 3 = Diamond-Square
 uniform float noiseScale;         // Échelle du bruit
 uniform float noiseGain;          // Gain du bruit
 uniform int noiseOctaves;         // Nombre d'octaves
@@ -11,7 +13,7 @@ uniform float noisePersistence;   // Persistance du bruit
 uniform float noisePower;         // Puissance du bruit
 uniform int seed;                 // Graine pour le bruit
 
-/* Source pour les algorithmes de bruit :
+/* Source pour les algorithmes de bruit de perlin:
  * https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 */
 
