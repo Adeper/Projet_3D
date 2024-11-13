@@ -23,10 +23,16 @@ GLFWwindow* window;
 
 // Include shaders
 #include <shader.hpp>
+#include <Actor.hpp>
+#include <Camera.hpp>
 
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
 
 GLuint computeNoiseProgram, vertexNoiseProgram, fragmentNoiseProgram;
 GLuint noiseTexture; 
@@ -39,6 +45,8 @@ bool globalInit();
 GLFWwindow* initWindow();
 void initImgui();
 void setUPVAOVBO();
+
+void updateLightPosition(GLuint _lightID);
 
 bool useComputeShader;
 
@@ -62,6 +70,16 @@ int main(void)
 
     initImgui();
 
+    GLuint VertexArrayID;
+    glGenVertexArrays(1, &VertexArrayID);
+    glBindVertexArray(VertexArrayID);
+    GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+    GLuint MatrixID = glGetUniformLocation(programID, "MVP");
+    GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
+    GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
+    GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+    GLuint colorID = glGetUniformLocation(programID, "color_Mesh");
+
     if (glewIsSupported("GL_VERSION_4_3")) {
         computeNoiseProgram = loadComputeShader("noise_compute.glsl");
         useComputeShader = true;
@@ -77,7 +95,6 @@ int main(void)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         glBindImageTexture(0, noiseTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
     } else {
         noiseFragmentProgram = LoadShaders("noise_vertex.glsl", "noise_fragment.glsl");
         useComputeShader = false;
@@ -103,9 +120,43 @@ int main(void)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+    ObjController map;
+    Actor target;
+
+    map.loadObj("../data/myMap2.obj", glm::vec3(0.6f, 0.5f, 0.3f), colorID);
+    target.load("../data/cameraTarget.obj", glm::vec3(0.8f, 0.5f, 0.4f), colorID);
+
+    glUseProgram(programID);
+
+    Camera mainCamera;
+    mainCamera.init();
+
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+
+    //VSync - avoid having 3000 fps
+    glfwSwapInterval(1);
+
     do {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         // Nettoyage avant de dessiner
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        target.update(deltaTime, window, mainCamera.getRotation());
+        mainCamera.update(deltaTime, window);
+
+
+        glm::mat4 viewMatrix = mainCamera.getViewMatrix();
+        glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
+
+        //View
+        updateLightPosition(LightID);
+
+        map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
+        target.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID); 
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -209,6 +260,10 @@ int main(void)
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
 
@@ -229,6 +284,11 @@ int main(void)
         glDeleteVertexArrays(1, &quadVAO);
         glDeleteFramebuffers(1, &noiseFramebuffer);
     }
+
+    glDeleteProgram(programID);
+
+    map.deleteBuffer();
+    target.destroy();
 
     glDeleteTextures(1, &noiseTexture);
 
@@ -320,4 +380,8 @@ void setUPVAOVBO(){
     glBindVertexArray(0);
 }
 
-
+void updateLightPosition(GLuint _lightID)
+{
+    const glm::vec3 lightPos = glm::vec3(4.f, 90.f, 4.f);
+    glUniform3f(_lightID, lightPos.x, lightPos.y, lightPos.z);
+}

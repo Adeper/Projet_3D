@@ -6,6 +6,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <iostream>
+
 glm::vec3	position_initial{ glm::vec3(0.f, 40.f, 0.f) };
 glm::vec3	euler_initial{ glm::vec3(0.f, 0.f, 0.f) };
 
@@ -90,6 +92,8 @@ void Camera::updateInterface(float _deltaTime)
     		init();
 	}
 	ImGui::End();
+
+	std::cout << "test" << std::endl;
 
 	if (m_showImguiDemo)
 	{
@@ -248,7 +252,7 @@ void Camera::updateFontRightUp(){
 
 void Camera::update(float _deltaTime, GLFWwindow* _window)
 {
-	updateInterface(_deltaTime);
+	//updateInterface(_deltaTime);
 	if(!m_inTransition)
 		updateFreeInput(_deltaTime, _window);
 	else
