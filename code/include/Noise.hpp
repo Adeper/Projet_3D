@@ -3,13 +3,30 @@
 #ifndef NOISE_HPP
 #define NOISE_HPP
 
+// Include standard headers
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+// Include GLEW
+#include <GL/glew.h>
+
+// Include GLFW
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
 
 // Include GLM
+#include <glm/glm.hpp>
+
+// Include ImGui
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+
+// Include shaders
+#include <shader.hpp>
 
 /* Classe pour générer le bruit sur une fenêtre ImGui en fonction de paramètres */
 
@@ -23,15 +40,19 @@ class Noise {
         int octaves; // Nombre d'octaves
         float persistence; // Persistance du bruit
         float power; // UNLIMITED POWER
-
-        bool useComputeShader; // Pour savoir si on utilise le compute shader ou vertex/fragment shader
         
         GLuint programID; 
         GLuint noiseTexture; 
 
-        GLuint VAO, VBO // uniquement utile pour le fragment shader
+        // Spécifique au fragment shader
+        GLuint VAO, VBO;
+        GLuint noiseFramebuffer;
+
+        bool hasChanged; // Pour savoir si les paramètres ont changé
 
     public:
+
+        bool useComputeShader; // Pour savoir si on utilise le compute shader ou vertex/fragment shader
 
         // Setters et getters des paramètres du bruit
 
@@ -47,31 +68,31 @@ class Noise {
         int getOctaves();
         void setOctaves(int newOctaves);
 
-        int getPersistence();
+        float getPersistence();
         void setPersistence(float newPersistence);
+
+        float getPower();
+        void setPower(float newPower);
 
         // Quelques Set Up 
 
         void setProgramID(); // chargement des ou du shader
         void initTexture(); // initialisation de la texture où sera stocker le bruit
+        void setBindingTexture(); // binding de la texture
+        void initVAOVBO(); // initialisation des VAO et VBO
 
         // Constructeur
 
-        init();
+        void init();
 
         // Interface
 
-        void updateInterface();
+        void parametersInterface();
+        void noiseInterface();
 
+        // Destructeur
+        void destroy();
 
+};
 
-    
-
-
-
-
-
-
-
-
-}
+#endif
