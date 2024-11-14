@@ -14,7 +14,6 @@ class Camera
 public: 
 
 	void init();
-	void transition(float _deltaTime);
 	void update(float _deltaTime, GLFWwindow* _window);
 	void updateInterface(float _deltaTime);
 	void updateFreeInput(float _deltaTime, GLFWwindow* _window);
@@ -32,7 +31,7 @@ private:
 	//Camera parameters 
 	float		m_fovDegree{ 45.0f };
 	float		m_speedTranslation{ 10.0f };
-	float		m_speedRotation{ 2.0f };
+	float		m_speedRotation{ 0.01f };
 	glm::vec3	m_position{ glm::vec3(0.f, 40.f, 0.f) };
 	glm::vec3	m_eulerAngle{ glm::vec3(0.f, 0.f, 0.f) };
 	glm::vec3	m_front = VEC_FRONT;
@@ -41,14 +40,13 @@ private:
 	glm::vec3	m_front_horizontal = VEC_FRONT;
 	glm::vec3	m_right_horizontal = VEC_RIGHT;
 	glm::quat	m_rotation{};
-	float lastX = 0;
-	float lastY = 0;
 
-	int		m_mode{ 0 };
 	int		m_mode_axe_Horizontal{ -1 };
 	int		m_mode_axe_Vertical{ -1 };
-	bool	m_mode_free_cursor=false;
-	bool	m_inTransition=false;
+
+	//Pour la rotation de la camera avec le click souris
+	bool isRotating = false;
+	glm::vec2 lastPos{ glm::vec2(0.,0.) };
 
 	//Interface option
 	bool m_showImguiDemo{ false };

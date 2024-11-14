@@ -143,20 +143,7 @@ int main(void)
         lastFrame = currentFrame;
 
         // Nettoyage avant de dessiner
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        target.update(deltaTime, window, mainCamera.getRotation());
-        mainCamera.update(deltaTime, window);
-
-
-        glm::mat4 viewMatrix = mainCamera.getViewMatrix();
-        glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
-
-        //View
-        updateLightPosition(LightID);
-
-        map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
-        target.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID); 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -255,6 +242,19 @@ int main(void)
         }
 
         ImGui::End();
+
+        target.update(deltaTime, window, mainCamera.getRotation());
+        mainCamera.update(deltaTime, window);
+
+
+        glm::mat4 viewMatrix = mainCamera.getViewMatrix();
+        glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
+
+        //View
+        updateLightPosition(LightID);
+
+        map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
+        target.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
 
 
         ImGui::Render();
