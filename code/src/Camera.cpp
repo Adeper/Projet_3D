@@ -25,6 +25,7 @@ void Camera::init()
 	m_up = VEC_UP;
 	m_rotation = glm::quat{};
 	m_showImguiDemo = false;
+	m_far = 200.0f;
 }
 
 bool isChecked_X = false;
@@ -50,7 +51,10 @@ void Camera::updateInterface(float _deltaTime)
 		ImGui::SliderFloat("roll", &m_eulerAngle.z, -180, 180);
 
 		ImGui::Text("FOV %f", m_fovDegree);
-		ImGui::SliderFloat("FOV", &m_fovDegree, 1.0f, 179.0f);
+		ImGui::SliderFloat("FOV", &m_fovDegree, 1.0f, 150.0f);
+
+		ImGui::Text("Far clip %f", m_far);
+		ImGui::SliderFloat("Far clip", &m_far, 50.0f, 1000.0f);
 
 		ImGui::Separator();
 		ImGui::Text(" === Les controles et modes ===");
@@ -171,7 +175,7 @@ void Camera::update(float _deltaTime, GLFWwindow* _window)
 	updateFontRightUp();
 	m_rotation = glm::quat(glm::radians(m_eulerAngle));
 
-	Camera_Helper::computeFinalView(m_projectionMatrix, m_viewMatrix, m_position, m_rotation, m_fovDegree);
+	Camera_Helper::computeFinalView(m_projectionMatrix, m_viewMatrix, m_position, m_rotation, m_fovDegree, m_far);
 }
 
 void Camera::mouseRotation(float _deltaTime, GLFWwindow* window) {

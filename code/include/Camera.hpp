@@ -40,6 +40,7 @@ private:
 	glm::vec3	m_front_horizontal = VEC_FRONT;
 	glm::vec3	m_right_horizontal = VEC_RIGHT;
 	glm::quat	m_rotation{};
+	float		m_far = 200.0f;
 
 	int		m_mode_axe_Horizontal{ -1 };
 	int		m_mode_axe_Vertical{ -1 };

@@ -25,6 +25,7 @@ GLFWwindow* window;
 #include <shader.hpp>
 #include <Actor.hpp>
 #include <Camera.hpp>
+#include <Skybox.hpp>
 
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
@@ -136,6 +137,17 @@ int main(void)
 
     //VSync - avoid having 3000 fps
     glfwSwapInterval(1);
+
+    // ==== Skybox ====
+    std::vector<std::string> faces = {
+        "../data/skybox/right.jpg",
+        "../data/skybox/left.jpg",
+        "../data/skybox/top.jpg",
+        "../data/skybox/bottom.jpg",
+        "../data/skybox/front.jpg",
+        "../data/skybox/back.jpg"
+    };
+    Skybox skybox(faces);
 
     do {
         float currentFrame = glfwGetTime();
@@ -253,9 +265,10 @@ int main(void)
         //View
         updateLightPosition(LightID);
 
-        map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
+        //map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
         target.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
 
+        skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
