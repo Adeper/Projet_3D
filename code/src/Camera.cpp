@@ -90,6 +90,7 @@ void Camera::updateFreeInput(float _deltaTime, GLFWwindow* _window)
 {
 	if (!ImGui::GetIO().WantCaptureMouse) {
 		if ((glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) && !isRotating){
+			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			isRotating = true;
 			double xpos, ypos;
 			glfwGetCursorPos(_window, &xpos, &ypos);
@@ -98,9 +99,11 @@ void Camera::updateFreeInput(float _deltaTime, GLFWwindow* _window)
 		
 		if ((glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) && isRotating){
 			isRotating = false;
+			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
 	}else{
 		isRotating = false;
+		glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
 	// Move forward
