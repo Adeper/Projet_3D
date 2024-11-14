@@ -8,7 +8,9 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/norm.hpp>
 
-#define M_PI       3.14159265358979323846f   // pi
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 static glm::vec3 VEC_ZERO{ 0.f,0.f,0.f };
 static glm::vec3 VEC_UP{ 0.f,1.f,0.f };
