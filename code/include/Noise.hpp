@@ -41,6 +41,10 @@ class Noise {
         float persistence; // Persistance du bruit
         float power; // UNLIMITED POWER
         
+        int width;  // Largeur de la texture
+        int height; // Hauteur de la texture
+
+        
         GLuint programID; 
         GLuint noiseTexture; 
 
@@ -49,6 +53,7 @@ class Noise {
         GLuint noiseFramebuffer;
 
         bool hasChanged; // Pour savoir si les paramètres ont changé
+        bool hasChangedRes; // Pour savoir si la résolution a changé
 
     public:
 
@@ -74,12 +79,19 @@ class Noise {
         float getPower();
         void setPower(float newPower);
 
+        int getWidth();
+        void setWidth(int newWidth);
+
+        int getHeight();
+        void setHeight(int newHeight);
+
         // Quelques Set Up 
 
         void setProgramID(); // chargement des ou du shader
         void initTexture(); // initialisation de la texture où sera stocker le bruit
         void setBindingTexture(); // binding de la texture
         void initVAOVBO(); // initialisation des VAO et VBO
+        void sendParameters(); // envoie des paramètres au shader
 
         // Constructeur
 
@@ -89,6 +101,11 @@ class Noise {
 
         void parametersInterface();
         void noiseInterface();
+
+        // Importation et exportation des textures
+
+        void loadTexture(const char* path);
+        void saveTexture(const char* path);
 
         // Destructeur
         void destroy();
