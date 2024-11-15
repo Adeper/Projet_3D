@@ -26,6 +26,7 @@ GLFWwindow* window;
 #include <Actor.hpp>
 #include <Camera.hpp>
 #include <Skybox.hpp>
+#include <mesh.hpp>
 
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
@@ -140,14 +141,27 @@ int main(void)
 
     // ==== Skybox ====
     std::vector<std::string> faces = {
-        "../data/skybox/right.jpg",
-        "../data/skybox/left.jpg",
-        "../data/skybox/top.jpg",
-        "../data/skybox/bottom.jpg",
-        "../data/skybox/front.jpg",
-        "../data/skybox/back.jpg"
+        "../data/skybox/standard_tuto/px.jpg",
+        "../data/skybox/standard_tuto/nx.jpg",
+        "../data/skybox/standard_tuto/py.jpg",
+        "../data/skybox/standard_tuto/ny.jpg",
+        "../data/skybox/standard_tuto/pz.jpg",
+        "../data/skybox/standard_tuto/nz.jpg"
     };
     Skybox skybox(faces);
+
+    // TEST MESH
+    /*
+    std::vector<glm::vec3> indexed_vertices;
+    std::vector<unsigned short> indices;
+    std::vector<std::vector<unsigned short> > triangles;
+
+    std::string filename("../data/sphere.off");
+    loadOFF(filename, indexed_vertices, indices, triangles );
+
+    Mesh sphere1(indexed_vertices, indices,0);
+
+    sphere1.init();*/
 
     do {
         float currentFrame = glfwGetTime();
@@ -258,17 +272,17 @@ int main(void)
         target.update(deltaTime, window, mainCamera.getRotation());
         mainCamera.update(deltaTime, window);
 
-
         glm::mat4 viewMatrix = mainCamera.getViewMatrix();
         glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
 
         //View
         updateLightPosition(LightID);
 
-        //map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
+        //skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
+
+        map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
         target.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
 
-        skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
