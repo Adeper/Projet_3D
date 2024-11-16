@@ -30,6 +30,7 @@ include_directories(
 include_directories(
 	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_SOURCE_DIR}/imgui
+    ${CMAKE_SOURCE_DIR}/external/stb
 )
 
 # Bibliothèques nécessaires

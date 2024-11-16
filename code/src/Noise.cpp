@@ -1,5 +1,20 @@
 #include "Noise.hpp"
 
+// Inclue stb_image
+#define _CRT_SECURE_NO_WARNINGS
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#ifdef __clang__
+#define STBIWDEF static inline
+#endif
+#define STB_IMAGE_WRITE_STATIC
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+// Inclue tinyfiledialogs
+#include <tinyfiledialogs.h>
+
 // Constructeur
 void Noise::init(){
     
@@ -144,6 +159,11 @@ void Noise::setBindingTexture(){
 }
 
 void Noise::initVAOVBO(){
+
+    if (glIsVertexArray(VAO)) {
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+    }
 
     float quadVertices[] = {
     -1.0f,  1.0f, 0.0f, 1.0f,
@@ -292,11 +312,18 @@ void Noise::noiseInterface(){
 
     // Boutons pour importer/exporter
     if (ImGui::Button("Importer")) {
-        // Code d'importation
+        const char* path = tinyfd_openFileDialog("Importer une heightmap", "", 0, nullptr, nullptr, 0);
+        if (path) {
+            loadTexture(path);
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Exporter")) {
-        // Code d'exportation
+        char const* lFilterPatterns[] = { "*.png" };
+        const char* path = tinyfd_saveFileDialog("Exporter la heightmap", "", 1, lFilterPatterns, "Fichiers PNG");
+        if (path) {
+            saveTexture(path);
+        }
     }
 
     ImGui::End();
@@ -317,9 +344,62 @@ void Noise::destroy(){
 }
 
 void Noise::loadTexture(const char* path) {
-    // Charger l'image 
+
+    int channels;
+    unsigned char* imageData = stbi_load(path, &width, &height, &channels, STBI_grey); // Charger en niveaux de gris
+    if (!imageData) {
+        std::cerr << "Erreur : Impossible de charger l'image " << path << std::endl;
+        return;
+    }
+
+    // Créer ou mettre à jour la texture OpenGL
+    if (glIsTexture(noiseTexture)) {
+        glDeleteTextures(1, &noiseTexture);
+    }
+
+    glGenTextures(1, &noiseTexture);
+    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, imageData);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    setBindingTexture();
+    if (useComputeShader){
+        glUseProgram(programID);
+        sendParameters();
+        glDispatchCompute(width / 16, height / 16, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        
+    }
+    else {
+        initVAOVBO();
+        glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
+        glUseProgram(programID);
+        sendParameters();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // Libérer la mémoire de l'image
+    stbi_image_free(imageData);
+
+    std::cout << "Image " << path << " chargée avec succès (" << width << "x" << height << ")." << std::endl;
 }
 
 void Noise::saveTexture(const char* path) {
-    // Sauvegarde de l'image'
+    // Lire les données de la texture OpenGL
+    std::vector<unsigned char> pixels(width * height);
+    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, pixels.data());
+
+    // Enregistrer l'image en tant que fichier PNG
+    if (stbi_write_png(path, width, height, 1, pixels.data(), width)) {
+        std::cout << "Heightmap exportée avec succès vers " << path << std::endl;
+    } else {
+        std::cerr << "Erreur : Échec de l'exportation de la heightmap vers " << path << std::endl;
+    }
 }
