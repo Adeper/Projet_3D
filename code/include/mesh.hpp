@@ -19,7 +19,7 @@ class Mesh{
     public :
         Mesh(std::vector<glm::vec3>, std::vector<unsigned short>, int);
         void init();
-        void draw();
+        void draw(GLuint programID);
         void deleteBuffer();
 };
 

@@ -46,9 +46,13 @@ void Mesh::init(){
     glBindVertexArray(0);
 }
 
-void Mesh::draw(){
+void Mesh::draw(GLuint programID){
+    glUseProgram(programID);
+
     glBindVertexArray(vaoBuffer);
     glEnableVertexAttribArray(id);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     // Draw the triangles !
     glDrawElements(
@@ -60,6 +64,8 @@ void Mesh::draw(){
 
     glDisableVertexAttribArray(id);
     glBindVertexArray(0);
+
+    glUseProgram(0);
 }
 
 void Mesh::deleteBuffer(){

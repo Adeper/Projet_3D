@@ -34,5 +34,7 @@ void main(){
 	float cosTheta = dot( n,l );
 	cosTheta = max(cosTheta, 0.3);
 	
-	color = MaterialColor* cosTheta;
+	//color = MaterialColor* cosTheta;
+
+	color = vec3(0.,0.,1.);
 }

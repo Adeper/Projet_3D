@@ -26,7 +26,7 @@ GLFWwindow* window;
 #include <Actor.hpp>
 #include <Camera.hpp>
 #include <Skybox.hpp>
-#include <mesh.hpp>
+#include <Plane.hpp>
 
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
@@ -72,9 +72,10 @@ int main(void)
 
     initImgui();
 
-    GLuint VertexArrayID;
+    /*GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);
+    glBindVertexArray(VertexArrayID);*/
+
     GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
     GLuint MatrixID = glGetUniformLocation(programID, "MVP");
     GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
@@ -82,7 +83,7 @@ int main(void)
     GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
     GLuint colorID = glGetUniformLocation(programID, "color_Mesh");
 
-    if (glewIsSupported("GL_VERSION_4_3")) {
+    /*if (glewIsSupported("GL_VERSION_4_3")) {
         computeNoiseProgram = loadComputeShader("noise_compute.glsl");
         useComputeShader = true;
         std::cout << "Utilisation du compute shader pour le bruit" << std::endl;
@@ -120,15 +121,7 @@ int main(void)
             std::cerr << "Erreur : Framebuffer incomplet !" << std::endl;
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    ObjController map;
-    Actor target;
-
-    map.loadObj("../data/myMap2.obj", glm::vec3(0.6f, 0.5f, 0.3f), colorID);
-    target.load("../data/cameraTarget.obj", glm::vec3(0.8f, 0.5f, 0.4f), colorID);
-
-    glUseProgram(programID);
+    }*/
 
     Camera mainCamera;
     mainCamera.init();
@@ -148,20 +141,13 @@ int main(void)
         "../data/skybox/standard_tuto/pz.jpg",
         "../data/skybox/standard_tuto/nz.jpg"
     };
-    Skybox skybox(faces);
+    //Skybox skybox(faces);
 
-    // TEST MESH
-    /*
-    std::vector<glm::vec3> indexed_vertices;
-    std::vector<unsigned short> indices;
-    std::vector<std::vector<unsigned short> > triangles;
+    // TEST PLANE
+    Plane plan_test(100.0f, 100.0f, 100, glm::vec3(0.6f, 0.5f, 0.3f), colorID);
 
-    std::string filename("../data/sphere.off");
-    loadOFF(filename, indexed_vertices, indices, triangles );
+    glDisable(GL_CULL_FACE);
 
-    Mesh sphere1(indexed_vertices, indices,0);
-
-    sphere1.init();*/
 
     do {
         float currentFrame = glfwGetTime();
@@ -176,7 +162,7 @@ int main(void)
         ImGui::NewFrame();
 
         ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-        ImGui::Begin("Paramètres du bruit");
+        /*ImGui::Begin("Paramètres du bruit");
 
         const char* noiseTypes[] = { "Bruit par défaut", "Perlin", "Simplex", "Coherent", "Diamond Square" };
         
@@ -267,9 +253,8 @@ int main(void)
             // Code d'exportation
         }
 
-        ImGui::End();
+        ImGui::End();*/
 
-        target.update(deltaTime, window, mainCamera.getRotation());
         mainCamera.update(deltaTime, window);
 
         glm::mat4 viewMatrix = mainCamera.getViewMatrix();
@@ -280,16 +265,16 @@ int main(void)
 
         //skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
 
-        map.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
-        target.updateViewAndDraw(mainCamera, MatrixID, ModelMatrixID);
-
+        glUseProgram(programID);
+        plan_test.draw(mainCamera, ViewMatrixID, ModelMatrixID);
+        glUseProgram(0);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        glDisableVertexAttribArray(0);
+        /*glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(2);*/
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -311,11 +296,6 @@ int main(void)
         glDeleteVertexArrays(1, &quadVAO);
         glDeleteFramebuffers(1, &noiseFramebuffer);
     }
-
-    glDeleteProgram(programID);
-
-    map.deleteBuffer();
-    target.destroy();
 
     glDeleteTextures(1, &noiseTexture);
 
