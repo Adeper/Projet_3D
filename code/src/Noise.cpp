@@ -15,6 +15,9 @@
 // Inclue tinyfiledialogs
 #include <tinyfiledialogs.h>
 
+// Include nlohmann
+#include <json.hpp>
+
 // Constructeur
 void Noise::init(){
     
@@ -329,18 +332,79 @@ void Noise::noiseInterface(){
     ImGui::End();
 }
 
-void Noise::destroy(){
-    if (useComputeShader){
-        glDeleteProgram(programID);
-    }
-    else {
-        glDeleteProgram(programID);
-        glDeleteFramebuffers(1, &noiseFramebuffer);
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);   
+std::string Noise::getJsonPath(const std::string& imagePath) {
+    // Obtenir le chemin de base du projet : dossier heightmap
+    std::string jsonDir = "../heightmap/.json";
+
+    // Vérifier et créer le dossier s'il n'existe pas
+    if (!std::filesystem::exists(jsonDir)) {
+        std::filesystem::create_directories(jsonDir); // Crée le dossier et les parents si nécessaire
     }
 
-    glDeleteTextures(1, &noiseTexture);
+    // Extraire le nom de fichier de l'image sans son chemin
+    size_t lastSlash = imagePath.find_last_of("/\\");
+    std::string baseName = (lastSlash != std::string::npos) 
+                            ? imagePath.substr(lastSlash + 1) 
+                            : imagePath;
+
+    // Remplacer l'extension par .json
+    size_t dotPosition = baseName.find_last_of('.');
+    if (dotPosition == std::string::npos) {
+        throw std::runtime_error("Chemin d'image invalide (pas d'extension trouvée) : " + imagePath);
+    }
+    std::string jsonFileName = baseName.substr(0, dotPosition) + ".json";
+
+    return jsonDir + "/" + jsonFileName;
+}
+
+
+// Exporter les métadonnées avec le bruit
+void Noise::saveMetadata(const char* path) {
+    
+    nlohmann::json metadata;
+    metadata["noiseType"] = noiseType;
+    metadata["scale"] = scale;
+    metadata["gain"] = gain;
+    metadata["octaves"] = octaves;
+    metadata["persistence"] = persistence;
+    metadata["power"] = power;
+    metadata["width"] = width;
+    metadata["height"] = height;
+
+    std::string metadataPath = getJsonPath(path);
+    std::ofstream file(metadataPath);
+    if (file.is_open()) {
+        file << metadata.dump(4); // Sauvegarde avec indentation
+        file.close();
+        std::cout << "Métadonnées sauvegardées dans " << metadataPath << std::endl;
+    } else {
+        std::cerr << "Erreur : Impossible de sauvegarder les métadonnées." << std::endl;
+    }
+}
+
+void Noise::loadMetadata(const char* path) {
+
+    std::string metadataPath = getJsonPath(path);
+    std::ifstream file(metadataPath);
+    if (file.is_open()) {
+        nlohmann::json metadata;
+        file >> metadata;
+        file.close();
+
+        // Charger les paramètres
+        noiseType = metadata["noiseType"];
+        scale = metadata["scale"];
+        gain = metadata["gain"];
+        octaves = metadata["octaves"];
+        persistence = metadata["persistence"];
+        power = metadata["power"];
+        width = metadata["width"];
+        height = metadata["height"];
+
+        std::cout << "Métadonnées chargées depuis " << path << std::endl;
+    } else {
+        std::cerr << "Avertissement : Aucun fichier de métadonnées trouvé pour " << path << std::endl;
+    }
 }
 
 void Noise::loadTexture(const char* path) {
@@ -365,6 +429,9 @@ void Noise::loadTexture(const char* path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // Charger les métadonnées associées
+    loadMetadata(path);
 
     setBindingTexture();
     if (useComputeShader){
@@ -399,7 +466,23 @@ void Noise::saveTexture(const char* path) {
     // Enregistrer l'image en tant que fichier PNG
     if (stbi_write_png(path, width, height, 1, pixels.data(), width)) {
         std::cout << "Heightmap exportée avec succès vers " << path << std::endl;
+        // Sauvegarder les métadonnées
+        saveMetadata(path);
     } else {
         std::cerr << "Erreur : Échec de l'exportation de la heightmap vers " << path << std::endl;
     }
+}
+
+void Noise::destroy(){
+    if (useComputeShader){
+        glDeleteProgram(programID);
+    }
+    else {
+        glDeleteProgram(programID);
+        glDeleteFramebuffers(1, &noiseFramebuffer);
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);   
+    }
+
+    glDeleteTextures(1, &noiseTexture);
 }

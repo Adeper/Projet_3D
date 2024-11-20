@@ -31,6 +31,7 @@ include_directories(
 	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_SOURCE_DIR}/imgui
     ${CMAKE_SOURCE_DIR}/external/stb
+    ${CMAKE_SOURCE_DIR}/external/nlohmann
 )
 
 # Bibliothèques nécessaires

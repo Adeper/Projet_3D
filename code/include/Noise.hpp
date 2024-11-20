@@ -104,6 +104,10 @@ class Noise {
 
         // Importation et exportation des textures
 
+        std::string getJsonPath(const std::string& imagePath);
+        
+        void saveMetadata(const char* path);
+        void loadMetadata(const char* path);
         void loadTexture(const char* path);
         void saveTexture(const char* path);
 
