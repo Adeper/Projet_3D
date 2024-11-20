@@ -24,6 +24,7 @@ GLFWwindow* window;
 // Include shaders
 #include <shader.hpp>
 #include <Noise.hpp>
+#include <Plane.hpp>
 
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
@@ -54,6 +55,11 @@ int main(void)
         noise.initVAOVBO(); // Initialise le VAO et le VBO
     }
 
+    Plane plane(10, 10, 1.0f); // Exemple de grille 10x10 avec un espacement de 1.0
+    plane.init(); // Initialisation de la grille
+    plane.loadShaders("plane_vertex.glsl", "plane_fragment.glsl");
+
+
     do {
 
         // Nettoyage avant de dessiner
@@ -65,6 +71,9 @@ int main(void)
 
         noise.parametersInterface(); // Interface ImGui pour les paramètres du bruit
         noise.noiseInterface(); // Affiche la texture dans l'interface ImGui
+
+        plane.imguiInterface(); // Interface ImGui pour les paramètres de la grille
+        plane.draw(); // Dessin de la grille
     
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
