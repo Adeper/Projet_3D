@@ -1,38 +1,27 @@
 #version 330 core
 
-// Interpolated values from the vertex shaders
 in vec2 UV;
-in vec3 Position_worldspace;
-in vec3 Normal_cameraspace;
-in vec3 EyeDirection_cameraspace;
-in vec3 LightDirection_cameraspace;
+in vec3 Normal;
+in vec3 FragPos;
 
-// Ouput data
-out vec3 color;
+out vec4 color;
 
-// Values that stay constant for the whole mesh.
-uniform sampler2D myTextureSampler;
-uniform mat4 MV;
 uniform vec3 LightPosition_worldspace;
+uniform vec3 LightColor_worldspace;
 uniform vec3 color_Mesh;
 
-void main(){
+void main() {
+    vec3 norm = normalize(Normal);
 
-	// Light emission properties
-	// You probably want to put them as uniforms
-	vec3 LightColor = vec3(1,1,1);
-	float LightPower = 100.0f;
-	
-	// Material properties
-	vec3 MaterialColor = color_Mesh;
+    vec3 lightDir = normalize(LightPosition_worldspace - FragPos);
 
-	// Distance to the light
-	float distance = length( LightPosition_worldspace - Position_worldspace );
+    float diff = max(dot(norm, lightDir), 0.0);
 
-	vec3 n = normalize( Normal_cameraspace );
-	vec3 l = normalize( LightDirection_cameraspace );
-	float cosTheta = dot( n,l );
-	cosTheta = max(cosTheta, 0.3);
-	
-	color = MaterialColor* cosTheta;
+    vec3 diffuse = diff * LightColor_worldspace;
+
+    vec3 result = diffuse * color_Mesh;
+
+    //color = vec4(result, 1.0);
+
+    color = vec4(color_Mesh, 1.0);
 }

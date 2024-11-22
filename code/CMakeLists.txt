@@ -57,8 +57,11 @@ set(SHADERS
     shaders/noise_compute.glsl
     shaders/noise_fragment.glsl
     shaders/noise_vertex.glsl
-    shaders/plane_fragment.glsl
-    shaders/plane_vertex.glsl
+    shaders/skybox_fragment.glsl
+    shaders/skybox_vertex.glsl
+    shaders/normal_fragment_shader.glsl
+    shaders/normal_vertex_shader.glsl
+    shaders/normal_geometry_shader.glsl
 )
 
 # Fichiers ImGui
@@ -67,6 +70,7 @@ file(GLOB IMGUI_HDR imgui/*.h)
 
 # Fichiers du projet
 file(GLOB_RECURSE SRC_FILES src/*.cpp)
+list(APPEND SRC_FILES ${CMAKE_SOURCE_DIR}/external/stb/stb_image.cpp)
 file(GLOB_RECURSE INCLUDE_FILES include/*.hpp)
 
 # Exécutable principal
