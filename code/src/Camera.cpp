@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-glm::vec3	position_initial{ glm::vec3(0.f, 40.f, 0.f) };
+glm::vec3	position_initial{ glm::vec3(0.f, 5.f, 0.f) };
 glm::vec3	euler_initial{ glm::vec3(0.f, 0.f, 0.f) };
 
 void Camera::init()
@@ -61,19 +61,19 @@ void Camera::updateInterface(float _deltaTime)
 		if (ImGui::Checkbox("Inverser l'axe X", &isChecked_X)) {
 			if (isChecked_X) {
 				std::cout << "L'axe x est inverse" << std::endl;
-				m_mode_axe_Horizontal = 1;
+				m_mode_axe_Horizontal = -1;
 			} else {
 				std::cout << "L'axe x n'est pas inverse" << std::endl;
-				m_mode_axe_Horizontal = -1;
+				m_mode_axe_Horizontal = 1;
 			}
 		}
 		if (ImGui::Checkbox("Inverser l'axe Y", &isChecked_Y)) {
 			if (isChecked_Y) {
 				std::cout << "L'axe y est inverse" << std::endl;
-				m_mode_axe_Vertical = 1;
+				m_mode_axe_Vertical = -1;
 			} else {
 				std::cout << "L'axe y n'est pas inverse" << std::endl;
-				m_mode_axe_Vertical = -1;
+				m_mode_axe_Vertical = 1;
 			}
 		}
 
