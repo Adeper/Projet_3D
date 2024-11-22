@@ -1,43 +1,46 @@
 #ifndef PLANE_HPP
 #define PLANE_HPP
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-
-#include <glm/glm.hpp>
 #include <GL/glew.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <vector>
+#include <glm/glm.hpp>
 #include <Camera.hpp>
-#include <shader.hpp>
+#include <string>
+#include <vector>
 
 class Plane {
 public:
-    Plane(float width, float depth, int resolution, const glm::vec3& _color, GLuint _colorID);
+    Plane(float size = 1.0f, unsigned int resolution = 10, Camera* cam = nullptr);
     ~Plane();
 
-    void draw(const Camera& _camera, GLuint _matrixID, GLuint _modelMatrixID);
+    void draw();
+    void update();
 
 private:
-    void generatePlane();
-    void updateView(const Camera& _camera, GLuint _matrixID, GLuint _modelMatrixID);
+    void createPlaneVAO();
+    GLuint loadTexture(const std::string& texturePath);
+    void showImGuiInterface();
+    void updateSize(float newSize);
+    void updateResolution(unsigned int newResolution);
+    void recreatePlane();
 
-    float width, depth;
+    Camera* camera_plan; 
+
+    float size;
     int resolution;
 
-    GLuint colorID;
-    GLuint m_vertexbufferID;
-	GLuint m_uvbufferID;
-	GLuint m_normalbufferID;
-
-    glm::vec3 color;
-    std::vector<float> vertices;   
+    std::vector<float> vertices;
     std::vector<unsigned int> indices;
-    std::vector<float> normals;
     std::vector<float> uvs;
+    std::vector<float> normals;
+    glm::vec3 color;
 
-    glm::mat4 m_modelMatrix;
+    bool isWireframe;
+
+    GLuint VAO, VBO, EBO, UVBO, NBO;
+
+    GLuint m_shaderProgram, m_textureID, m_ColorID;
+
+    unsigned int m_indexCount;
 };
 
 #endif
