@@ -30,6 +30,8 @@ include_directories(
 include_directories(
 	${CMAKE_SOURCE_DIR}/include
 	${CMAKE_SOURCE_DIR}/imgui
+    ${CMAKE_SOURCE_DIR}/external/stb
+    ${CMAKE_SOURCE_DIR}/external/nlohmann
 )
 
 # Bibliothèques nécessaires
@@ -55,6 +57,8 @@ set(SHADERS
     shaders/noise_compute.glsl
     shaders/noise_fragment.glsl
     shaders/noise_vertex.glsl
+    shaders/plane_fragment.glsl
+    shaders/plane_vertex.glsl
 )
 
 # Fichiers ImGui
