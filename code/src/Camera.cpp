@@ -25,7 +25,7 @@ void Camera::init()
 	m_up = VEC_UP;
 	m_rotation = glm::quat{};
 	m_showImguiDemo = false;
-	m_far = 200.0f;
+	m_far = 500.0f;
 }
 
 bool isChecked_X = false;
@@ -77,6 +77,11 @@ void Camera::updateInterface(float _deltaTime)
 			}
 		}
 
+		ImGui::Text("Mode camera : %d", m_mode_camera);
+		if (ImGui::Button("Changer de mode de mouvement")){
+			m_mode_camera = (m_mode_camera+1) % m_nb_mode;
+		}
+
 		ImGui::Separator();
 		if (ImGui::Button("Réinitialisation (Tout)"))
     		init();
@@ -110,25 +115,54 @@ void Camera::updateFreeInput(float _deltaTime, GLFWwindow* _window)
 		glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 
-	// Move forward
-	if (glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS){
-		m_position += m_front * _deltaTime * m_speedTranslation;
+	switch(m_mode_camera) {
+	case 0: // Mode 0 : mouvement par rapport à l'orientation de la camera
+		// Move forward
+		if (glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS){
+			m_position += m_front * _deltaTime * m_speedTranslation;
+		}
+		// Move backward
+		if (glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS){
+			m_position -= m_front * _deltaTime * m_speedTranslation;
+		}
+		// Strafe right
+		if (glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS){
+			m_position += m_right * _deltaTime * m_speedTranslation;
+		}
+		// Strafe left
+		if (glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS){
+			m_position -= m_right * _deltaTime * m_speedTranslation;
+		}
+		break;
+	case 1: // Mode 1 : mouvement uniquement par rapport au front et right (orientation pas comprise)
+		// Move forward
+		if (glfwGetKey( _window, GLFW_KEY_W ) == GLFW_PRESS){
+			m_position += m_front_horizontal * _deltaTime * m_speedTranslation;
+		}
+		// Move backward
+		if (glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS){
+			m_position -= m_front_horizontal * _deltaTime * m_speedTranslation;
+		}
+		// Strafe right
+		if (glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS){
+			m_position += m_right_horizontal * _deltaTime * m_speedTranslation;
+		}
+		// Strafe left
+		if (glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS){
+			m_position -= m_right_horizontal * _deltaTime * m_speedTranslation;
+		}
+		break;
+	default:
+		std::cerr << "Mode camera incorrect !" << std::endl;
 	}
-	// Move backward
-	if (glfwGetKey( _window, GLFW_KEY_S ) == GLFW_PRESS){
-		m_position -= m_front * _deltaTime * m_speedTranslation;
-	}
-	// Strafe right
-	if (glfwGetKey( _window, GLFW_KEY_D ) == GLFW_PRESS){
-		m_position += m_right * _deltaTime * m_speedTranslation;
-	}
-	// Strafe left
-	if (glfwGetKey( _window, GLFW_KEY_A ) == GLFW_PRESS){
-		m_position -= m_right * _deltaTime * m_speedTranslation;
-	}
+
 	// Move up (world's up vector)
 	if (glfwGetKey( _window, GLFW_KEY_SPACE ) == GLFW_PRESS){
 		m_position += VEC_UP * _deltaTime * m_speedTranslation;
+	}
+	// Move down (world's up vector)
+	if (glfwGetKey( _window, GLFW_KEY_LEFT_SHIFT ) == GLFW_PRESS){
+		m_position -= VEC_UP * _deltaTime * m_speedTranslation;
 	}
 }
 
@@ -136,9 +170,9 @@ void Camera::updateFontRightUp(){
 	m_eulerAngle.y = Camera_Helper::clipAngle180(m_eulerAngle.y);
 
 	if(m_eulerAngle.x > 90.)
-		m_eulerAngle.x = 90.;
+		m_eulerAngle.x = 89.999;
 	if(m_eulerAngle.x < -90.)
-		m_eulerAngle.x = -90.;
+		m_eulerAngle.x = -89.999;
 	
     m_front.x = glm::sin(glm::radians(m_eulerAngle.y)) * glm::cos(glm::radians(m_eulerAngle.x));
     m_front.y = -glm::sin(glm::radians(m_eulerAngle.x));

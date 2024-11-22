@@ -44,6 +44,8 @@ private:
 
 	int		m_mode_axe_Horizontal{ 1 };
 	int		m_mode_axe_Vertical{ 1 };
+	int		m_mode_camera{ 0 };
+	int		m_nb_mode = 2;
 
 	//Pour la rotation de la camera avec le click souris
 	bool isRotating = false;
