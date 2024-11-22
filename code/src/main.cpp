@@ -116,9 +116,6 @@ int main(void)
 
         mainCamera.update(deltaTime, window);
 
-        glm::mat4 viewMatrix = mainCamera.getViewMatrix();
-        glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
-
         //View
         updateLightPosition(LightPosID, LightColorID);
 
