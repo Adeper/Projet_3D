@@ -15,12 +15,15 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     resolution = new_resolution;
     camera_plan = cam;
     isWireframe = false;
-    color = glm::vec3(1.f, 1.f, 0.f);
+    showNormals = false;
+    color = glm::vec3(1.f, 1.f, 1.f);
 
     createPlaneVAO();
 
     m_shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-    m_textureID = loadTexture("../peepoShy_texture.png");
+    m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
+
+    //m_textureID = loadTexture("");
 
     m_ColorID = glGetUniformLocation(m_shaderProgram, "color_Mesh");
 }
@@ -56,9 +59,31 @@ void Plane::draw() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+void Plane::drawNormals(){
+    glUseProgram(m_normalShaderProgram);
+
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    const glm::mat4& viewMatrix = camera_plan->getViewMatrix();
+    const glm::mat4& projectionMatrix = camera_plan->getProjectionMatrix();
+
+    glUniformMatrix4fv(glGetUniformLocation(m_normalShaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_normalShaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_normalShaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, vertices.size() / 3);
+    glBindVertexArray(0);
+}
+
+
 void Plane::update(){
     showImGuiInterface();
+
     draw();
+
+    if(showNormals){
+        drawNormals();
+    }
 }
 
 
@@ -174,13 +199,14 @@ void Plane::showImGuiInterface() {
                 prevSize = size;
             }
         }
-        if (ImGui::SliderInt("Resolution", &resolution, 1, 100)) {
+        if (ImGui::SliderInt("Resolution", &resolution, 1, 200)) {
             if (resolution != prevResolution) {
                 recreatePlane();
                 prevResolution = resolution;
             }
         }
         ImGui::Checkbox("Mode d'affichage", &isWireframe);
+        ImGui::Checkbox("Afficher les normales", &showNormals);
     }
     ImGui::End();
 }

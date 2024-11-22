@@ -13,6 +13,7 @@ public:
     ~Plane();
 
     void draw();
+    void drawNormals();
     void update();
 
 private:
@@ -35,10 +36,11 @@ private:
     glm::vec3 color;
 
     bool isWireframe;
+    bool showNormals;
 
     GLuint VAO, VBO, EBO, UVBO, NBO;
 
-    GLuint m_shaderProgram, m_textureID, m_ColorID;
+    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_ColorID;
 
     unsigned int m_indexCount;
 };

@@ -21,5 +21,7 @@ void main() {
 
     vec3 result = diffuse * color_Mesh;
 
-    color = vec4(result, 1.0);
+    //color = vec4(result, 1.0);
+
+    color = vec4(color_Mesh, 1.0);
 }
