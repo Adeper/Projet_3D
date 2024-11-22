@@ -46,9 +46,13 @@ void Plane::draw() {
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
+    
     glUniform3f(m_ColorID, color.x, color.y, color.z);
 
-    glBindTexture(GL_TEXTURE_2D, m_textureID);
+    //glBindTexture(GL_TEXTURE_2D, m_textureID);
 
     glPolygonMode(GL_FRONT_AND_BACK, isWireframe ? GL_LINE : GL_FILL);
 
@@ -226,4 +230,8 @@ void Plane::recreatePlane() {
 
 int Plane::getResolution(){
     return resolution;
+}
+
+void Plane::setHeightMap(GLuint heightMapID){
+    m_heightMapID = heightMapID;
 }

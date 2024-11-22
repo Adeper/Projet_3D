@@ -23,5 +23,7 @@ void main() {
 
     //color = vec4(result, 1.0);
 
-    color = vec4(color_Mesh, 1.0);
+    //color = vec4(color_Mesh, 1.0);
+
+    color = vec4(FragPos, 1.0);
 }

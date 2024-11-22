@@ -40,7 +40,7 @@ void Noise::init(){
 
 // Setters et getters des paramètres du bruit
 
-int Noise::getNoiseType(){
+int Noise::getNoiseType() const{
     return noiseType;
 }
 
@@ -48,7 +48,7 @@ void Noise::setNoiseType(int newNoiseType){
     noiseType = newNoiseType;
 }
 
-float Noise::getGain(){
+float Noise::getGain() const{
     return gain;
 }
 
@@ -56,7 +56,7 @@ void Noise::setGain(float newGain){
     gain = newGain;
 }
 
-int Noise::getOctaves(){
+int Noise::getOctaves() const{
     return octaves;
 }
 
@@ -64,7 +64,7 @@ void Noise::setOctaves(int newOctaves){
     octaves = newOctaves;
 }
 
-float Noise::getPersistence(){
+float Noise::getPersistence() const{
     return persistence;
 }
 
@@ -72,7 +72,7 @@ void Noise::setPersistence(float newPersistence){
     persistence = newPersistence;
 }
 
-float Noise::getPower(){
+float Noise::getPower() const{
     return power;
 }
 
@@ -80,13 +80,17 @@ void Noise::setPower(float newPower){
     power = newPower;
 }
 
-int Noise::getResolution() {
+int Noise::getResolution() const{
     return resolution;
 }
 
 void Noise::setResolution(int newResolution) {
     resolution = newResolution;
     hasChangedRes = true;
+}
+
+GLuint Noise::getTextureNoise() const{
+    return noiseTexture;
 }
 
 // Quelques Set Up

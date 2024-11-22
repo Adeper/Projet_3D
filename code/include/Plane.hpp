@@ -18,6 +18,8 @@ public:
 
     int getResolution();
 
+    void setHeightMap(GLuint heightMapID);
+
 private:
     void createPlaneVAO();
     GLuint loadTexture(const std::string& texturePath);
@@ -42,7 +44,7 @@ private:
 
     GLuint VAO, VBO, EBO, UVBO, NBO;
 
-    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_ColorID;
+    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID;
 
     unsigned int m_indexCount;
 };

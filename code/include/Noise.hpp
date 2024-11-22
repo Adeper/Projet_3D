@@ -59,23 +59,25 @@ class Noise {
 
         // Setters et getters des paramètres du bruit
 
-        int getNoiseType();
+        int getNoiseType() const;
         void setNoiseType(int newNoiseType);
 
-        float getGain();
+        float getGain() const;
         void setGain(float newGain);
 
-        int getOctaves();
+        int getOctaves() const;
         void setOctaves(int newOctaves);
 
-        float getPersistence();
+        float getPersistence() const;
         void setPersistence(float newPersistence);
 
-        float getPower();
+        float getPower() const;
         void setPower(float newPower);
 
-        int getResolution();
+        int getResolution() const;
         void setResolution(int newResolution);
+
+        GLuint getTextureNoise() const;
 
         // Quelques Set Up 
 
