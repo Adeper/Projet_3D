@@ -16,6 +16,7 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     camera_plan = cam;
     isWireframe = false;
     showNormals = false;
+    heightScale = 10.0f;
     color = glm::vec3(1.f, 1.f, 1.f);
 
     createPlaneVAO();
@@ -49,6 +50,8 @@ void Plane::draw() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_heightMapID);
     glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
+
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
     
     glUniform3f(m_ColorID, color.x, color.y, color.z);
 
@@ -209,6 +212,7 @@ void Plane::showImGuiInterface() {
                 prevResolution = resolution;
             }
         }
+        ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
         ImGui::Checkbox("Mode d'affichage", &isWireframe);
         ImGui::Checkbox("Afficher les normales", &showNormals);
     }

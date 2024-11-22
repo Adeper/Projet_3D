@@ -9,8 +9,10 @@ out vec4 color;
 uniform vec3 LightPosition_worldspace;
 uniform vec3 LightColor_worldspace;
 uniform vec3 color_Mesh;
+uniform sampler2D heightmap;
 
 void main() {
+    float height = texture(heightmap, UV).r;
     vec3 norm = normalize(Normal);
 
     vec3 lightDir = normalize(LightPosition_worldspace - FragPos);
@@ -25,5 +27,5 @@ void main() {
 
     //color = vec4(color_Mesh, 1.0);
 
-    color = vec4(FragPos, 1.0);
+    color = vec4(mix(vec3(0.2,0.5,0.8), vec3(0.8,0.6,0.4), height), 1.0);
 }

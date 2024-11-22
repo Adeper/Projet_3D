@@ -62,6 +62,7 @@ int main(void)
     // Création du programme de calcul
     Noise noise;
     noise.init(); // Initialisation des paramètres
+    noise.useComputeShader = false;
 
     noise.setProgramID(); // Charge les shaders appropriés
     noise.initTexture(); // Initialise la texture
