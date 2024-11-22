@@ -8,12 +8,11 @@ in vec2 TexCoords;
 
 // Paramètres du bruit
 uniform int noiseType;           // Type de bruit: 0 = Perlin simple, 1 = Simplex, 2 = Cohérent, 3 = Diamond-Square
-uniform float noiseScale;         // Échelle du bruit
 uniform float noiseGain;          // Gain du bruit
 uniform int noiseOctaves;         // Nombre d'octaves
 uniform float noisePersistence;   // Persistance du bruit
 uniform float noisePower;         // Puissance du bruit
-uniform ivec2 resolution;        // Résolution de l'image
+uniform int resolution;        // Résolution de l'image
 
 int screenWidth = 800;
 
@@ -26,7 +25,7 @@ float rand_1(vec2 c){
 }
 
 float noise_1(vec2 p, float freq ){
-	float unit = float(resolution.x) / freq;
+	float unit = float(resolution) / freq;
 	vec2 ij = floor(p/unit);
 	vec2 xy = mod(p,unit)/unit;
 	//xy = 3.*xy*xy-2.*xy*xy*xy;
@@ -317,23 +316,21 @@ float cnoiseVar(vec4 P){
 /* ----------- GENERATION DE BRUIT DE PERLIN ----------- */
 float generateNoise(vec2 uv){
     float amplitude = noiseGain;
-    float frequency = noiseScale;
     float total = 0.0;
     for (int i = 0; i < noiseOctaves; i++){
         float value;
         if (noiseType == 0)
-            value = pNoise_1(uv * frequency, 1); // Perlin basique 1
+            value = pNoise_1(uv, 1); // Perlin basique 1
         else if (noiseType == 1)
-            value = cnoise2D(uv * frequency); // Perlin 2D
+            value = cnoise2D(uv); // Perlin 2D
         else if (noiseType == 2)
-            value = cnoise3D(vec3(uv * frequency, 0.0)); // Perlin 3D
+            value = cnoise3D(vec3(uv, 0.0)); // Perlin 3D
         else if (noiseType == 3)
-            value = cnoiseVar(vec4(uv * frequency, 0.0, 0.0)); // Perlin 4D
+            value = cnoiseVar(vec4(uv, 0.0, 0.0)); // Perlin 4D
         else
             value = 0.0;
         total += value * amplitude;
         amplitude *= noisePersistence;
-        frequency *= 2.0;
     }
     total = pow(abs(total), noisePower);
     return clamp(total, 0.0, 1.0);
@@ -342,6 +339,6 @@ float generateNoise(vec2 uv){
 /* ----------- MAIN ----------- */
 void main() {
     vec2 uv = gl_FragCoord.xy / vec2(resolution);
-    float noiseValue = generateNoise(uv);
+    float noiseValue = generateNoise(uv * resolution);
     FragColor = vec4(vec3(noiseValue), 1.0); // Valeur en niveaux de gris
 }

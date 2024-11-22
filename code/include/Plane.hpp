@@ -16,6 +16,8 @@ public:
     void drawNormals();
     void update();
 
+    int getResolution();
+
 private:
     void createPlaneVAO();
     GLuint loadTexture(const std::string& texturePath);

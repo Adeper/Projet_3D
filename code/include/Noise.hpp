@@ -35,14 +35,12 @@ class Noise {
     private:
 
         int noiseType; // Type de bruit
-        float scale; // Echelle du bruit
         float gain; // Gain du bruit
         int octaves; // Nombre d'octaves
         float persistence; // Persistance du bruit
         float power; // UNLIMITED POWER
         
-        int width;  // Largeur de la texture
-        int height; // Hauteur de la texture
+        int resolution;
 
         
         GLuint programID; 
@@ -64,9 +62,6 @@ class Noise {
         int getNoiseType();
         void setNoiseType(int newNoiseType);
 
-        float getScale();
-        void setScale(float newScale);
-
         float getGain();
         void setGain(float newGain);
 
@@ -79,11 +74,8 @@ class Noise {
         float getPower();
         void setPower(float newPower);
 
-        int getWidth();
-        void setWidth(int newWidth);
-
-        int getHeight();
-        void setHeight(int newHeight);
+        int getResolution();
+        void setResolution(int newResolution);
 
         // Quelques Set Up 
 

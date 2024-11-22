@@ -95,7 +95,7 @@ int main(void)
     };
     Skybox skybox(faces);
 
-    Plane plan_test(10.f, 10, &mainCamera);
+    Plane terrain(10.f, 10, &mainCamera);
 
     glDisable(GL_CULL_FACE);
 
@@ -121,7 +121,9 @@ int main(void)
 
         skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
 
-        plan_test.update();
+        terrain.update();
+        
+        noise.setResolution(terrain.getResolution());
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

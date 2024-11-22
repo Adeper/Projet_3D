@@ -11,12 +11,11 @@ layout(rgba32f, binding = 0) uniform image2D noiseTexture;
 
 // Paramètres du bruit
 uniform int noiseType;           // Type de bruit: 0 = Perlin simple, 1 = Simplex, 2 = Cohérent, 3 = Diamond-Square
-uniform float noiseScale;         // Échelle du bruit
 uniform float noiseGain;          // Gain du bruit
 uniform int noiseOctaves;         // Nombre d'octaves
 uniform float noisePersistence;   // Persistance du bruit
 uniform float noisePower;         // Puissance du bruit
-uniform ivec2 resolution;        // Résolution de l'image
+uniform int resolution;        // Résolution de l'image
 
 /* DEBUG TEST DES DIFFERENTS ALGORITHMES DE BRUIT DE PERLIN */
 /* https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83 */
@@ -27,7 +26,7 @@ float rand_1(vec2 c){
 }
 
 float noise_1(vec2 p, float freq ){
-	float unit = float(resolution.x)/freq;
+	float unit = float(resolution)/freq;
 	vec2 ij = floor(p/unit);
 	vec2 xy = mod(p,unit)/unit;
 	//xy = 3.*xy*xy-2.*xy*xy*xy;
@@ -317,23 +316,21 @@ float cnoiseVar(vec4 P){
 /* ----------- GENERATION DE BRUIT DE PERLIN ----------- */
 float generateNoise(vec2 uv){
     float amplitude = noiseGain;
-    float frequency = noiseScale;
     float total = 0.0;
     for (int i = 0; i < noiseOctaves; i++){
         float value;
         if (noiseType == 0)
-            value = pNoise_1(uv * frequency, 1); // Perlin basique 1
+            value = pNoise_1(uv, 1); // Perlin basique 1
         else if (noiseType == 1)
-            value = cnoise2D(uv * frequency); // Perlin 2D
+            value = cnoise2D(uv); // Perlin 2D
         else if (noiseType == 2)
-            value = cnoise3D(vec3(uv * frequency, 0.0)); // Perlin 3D
+            value = cnoise3D(vec3(uv, 0.0)); // Perlin 3D
         else if (noiseType == 3)
-            value = cnoiseVar(vec4(uv * frequency, 0.0, 0.0)); // Perlin 4D
+            value = cnoiseVar(vec4(uv, 0.0, 0.0)); // Perlin 4D
         else
             value = 0.0;
         total += value * amplitude;
         amplitude *= noisePersistence;
-        frequency *= 2.0;
     }
     total = pow(abs(total), noisePower);
     return clamp(total, 0.0, 1.0);
@@ -346,7 +343,7 @@ void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 
     // Vérification des limites (pour éviter les dépassements si la résolution n'est pas un multiple de 16)
-    if (gid.x >= resolution.x || gid.y >= resolution.y) {
+    if (gid.x >= resolution || gid.y >= resolution) {
         return;
     }
 
@@ -354,7 +351,7 @@ void main() {
     vec2 uv = vec2(gid) / vec2(resolution);
 
     // Génération de la valeur de bruit
-    float noiseValue = generateNoise(uv);
+    float noiseValue = generateNoise(uv * resolution);
 
     // Stockage de la valeur dans la texture
     imageStore(noiseTexture, gid, vec4(vec3(noiseValue), 1.0));

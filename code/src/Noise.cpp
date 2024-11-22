@@ -18,14 +18,12 @@
 void Noise::init(){
     
     noiseType = 0; 
-    scale = 1.0f;
     gain = 1.0f; 
     octaves = 4; 
     persistence = 2.0f; 
     power = 1.0f; 
 
-    width = 1024;
-    height = 1024;
+    resolution = 10;
 
     int major, minor;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
@@ -48,14 +46,6 @@ int Noise::getNoiseType(){
 
 void Noise::setNoiseType(int newNoiseType){
     noiseType = newNoiseType;
-}
-
-float Noise::getScale(){
-    return scale;
-}
-
-void Noise::setScale(float newScale){
-    scale = newScale;
 }
 
 float Noise::getGain(){
@@ -90,21 +80,12 @@ void Noise::setPower(float newPower){
     power = newPower;
 }
 
-int Noise::getWidth() {
-    return width;
+int Noise::getResolution() {
+    return resolution;
 }
 
-void Noise::setWidth(int newWidth) {
-    width = newWidth;
-    hasChangedRes = true;
-}
-
-int Noise::getHeight() {
-    return height;
-}
-
-void Noise::setHeight(int newHeight) {
-    height = newHeight;
+void Noise::setResolution(int newResolution) {
+    resolution = newResolution;
     hasChangedRes = true;
 }
 
@@ -133,7 +114,7 @@ void Noise::initTexture(){
 
     glGenTextures(1, &noiseTexture);
     glBindTexture(GL_TEXTURE_2D, noiseTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, resolution, resolution, 0, GL_RGBA, GL_FLOAT, nullptr);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -189,12 +170,11 @@ void Noise::initVAOVBO(){
 void Noise::sendParameters(){
     glUseProgram(programID);
     glUniform1i(glGetUniformLocation(programID, "noiseType"), noiseType);
-    glUniform1f(glGetUniformLocation(programID, "noiseScale"), scale);
     glUniform1f(glGetUniformLocation(programID, "noiseGain"), gain);
     glUniform1i(glGetUniformLocation(programID, "noiseOctaves"), octaves);
     glUniform1f(glGetUniformLocation(programID, "noisePersistence"), persistence);
     glUniform1f(glGetUniformLocation(programID, "noisePower"), power);
-    glUniform2i(glGetUniformLocation(programID, "resolution"), width, height);
+    glUniform1i(glGetUniformLocation(programID, "resolution"), resolution);
 }
 
 void Noise::parametersInterface(){
@@ -205,37 +185,19 @@ void Noise::parametersInterface(){
     const char* noiseTypes[] = { "Perlin basique", "Perlin 2D", "Perlin 3D", "Perlin 4D" };
     
     static int previousNoiseType = noiseType;
-    static float previousScale = scale;
     static float previousGain = gain;
     static int previousOctaves = octaves;
     static float previousPersistence = persistence;
     static float previousPower = power;
-    static int previousWidth = width;
-    static int previousHeight = height;
 
     // Les sliders et le combo pour ajuster les paramètres
     ImGui::Combo("Type de bruit", &noiseType, noiseTypes, IM_ARRAYSIZE(noiseTypes));
-    ImGui::SliderFloat("Echelle", &scale, 1.0f, 100.0f);
     ImGui::SliderFloat("Gain", &gain, 0.0f, 1.0f);
     ImGui::SliderInt("Octaves", &octaves, 1, 10);
     ImGui::SliderFloat("Persistance", &persistence, 0.3f, 2.0f);
     ImGui::SliderFloat("Puissance", &power, 1.0f, 10.0f);
 
-    // Les sliders pour la résolution : vérifier que width et height sont des multiples de 16
-    // à cause du compute shader
 
-    int units_multiple = width / 16;  
-
-    // Slider pour la résolution
-    if (ImGui::SliderInt("Résolution", &units_multiple, 128 / 16, 2048 / 16)) {
-        width = units_multiple * 16;
-        height = units_multiple * 16; 
-    }
-
-    ImGui::Text("Résolution actuelle : %dx%d", width, height);
-
-    // Détection des changements de résolution
-    hasChangedRes = (width != previousWidth || height != previousHeight);
 
     if (hasChangedRes) {
         // Recréer la texture et mets à jour les variables
@@ -244,7 +206,7 @@ void Noise::parametersInterface(){
         if (useComputeShader){
             glUseProgram(programID);
             sendParameters();
-            glDispatchCompute(width / 16, height / 16, 1);
+            glDispatchCompute(resolution / 16, resolution / 16, 1);
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
             
         }
@@ -257,13 +219,10 @@ void Noise::parametersInterface(){
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-        previousWidth = width;
-        previousHeight = height;
     }
 
     // Détection des changements
     hasChanged = (noiseType != previousNoiseType ||
-                    scale != previousScale ||
                     gain != previousGain ||
                     octaves != previousOctaves ||
                     persistence != previousPersistence ||
@@ -276,7 +235,7 @@ void Noise::parametersInterface(){
 
             sendParameters();
 
-            glDispatchCompute(width / 16, height / 16, 1);
+            glDispatchCompute(resolution / 16, resolution / 16, 1);
             glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         } else {
             glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
@@ -291,7 +250,6 @@ void Noise::parametersInterface(){
 
         // Mise à jour de l'état des sliders
         previousNoiseType = noiseType;
-        previousScale = scale;
         previousGain = gain;
         previousOctaves = octaves;
         previousPersistence = persistence;
@@ -359,13 +317,11 @@ void Noise::saveMetadata(const char* path) {
     
     nlohmann::json metadata;
     metadata["noiseType"] = noiseType;
-    metadata["scale"] = scale;
     metadata["gain"] = gain;
     metadata["octaves"] = octaves;
     metadata["persistence"] = persistence;
     metadata["power"] = power;
-    metadata["width"] = width;
-    metadata["height"] = height;
+    metadata["resolution"] = resolution;
 
     std::string metadataPath = getJsonPath(path);
     std::ofstream file(metadataPath);
@@ -389,13 +345,11 @@ void Noise::loadMetadata(const char* path) {
 
         // Charger les paramètres
         noiseType = metadata["noiseType"];
-        scale = metadata["scale"];
         gain = metadata["gain"];
         octaves = metadata["octaves"];
         persistence = metadata["persistence"];
         power = metadata["power"];
-        width = metadata["width"];
-        height = metadata["height"];
+        resolution = metadata["resolution"];
 
         std::cout << "Métadonnées chargées depuis " << path << std::endl;
     } else {
@@ -406,7 +360,7 @@ void Noise::loadMetadata(const char* path) {
 void Noise::loadTexture(const char* path) {
 
     int channels;
-    unsigned char* imageData = stbi_load(path, &width, &height, &channels, STBI_grey); // Charger en niveaux de gris
+    unsigned char* imageData = stbi_load(path, &resolution, &resolution, &channels, STBI_grey); // Charger en niveaux de gris
     if (!imageData) {
         std::cerr << "Erreur : Impossible de charger l'image " << path << std::endl;
         return;
@@ -419,7 +373,7 @@ void Noise::loadTexture(const char* path) {
 
     glGenTextures(1, &noiseTexture);
     glBindTexture(GL_TEXTURE_2D, noiseTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, imageData);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, resolution, resolution, 0, GL_RED, GL_UNSIGNED_BYTE, imageData);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -433,7 +387,7 @@ void Noise::loadTexture(const char* path) {
     if (useComputeShader){
         glUseProgram(programID);
         sendParameters();
-        glDispatchCompute(width / 16, height / 16, 1);
+        glDispatchCompute(resolution / 16, resolution / 16, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         
     }
@@ -450,17 +404,17 @@ void Noise::loadTexture(const char* path) {
     // Libérer la mémoire de l'image
     stbi_image_free(imageData);
 
-    std::cout << "Image " << path << " chargée avec succès (" << width << "x" << height << ")." << std::endl;
+    std::cout << "Image " << path << " chargée avec succès (" << resolution << "x" << resolution << ")." << std::endl;
 }
 
 void Noise::saveTexture(const char* path) {
     // Lire les données de la texture OpenGL
-    std::vector<unsigned char> pixels(width * height);
+    std::vector<unsigned char> pixels(resolution * resolution);
     glBindTexture(GL_TEXTURE_2D, noiseTexture);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, pixels.data());
 
     // Enregistrer l'image en tant que fichier PNG
-    if (stbi_write_png(path, width, height, 1, pixels.data(), width)) {
+    if (stbi_write_png(path, resolution, resolution, 1, pixels.data(), resolution)) {
         std::cout << "Heightmap exportée avec succès vers " << path << std::endl;
         // Sauvegarder les métadonnées
         saveMetadata(path);

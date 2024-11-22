@@ -223,3 +223,7 @@ void Plane::recreatePlane() {
 
     createPlaneVAO();
 }
+
+int Plane::getResolution(){
+    return resolution;
+}
