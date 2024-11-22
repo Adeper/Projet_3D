@@ -23,7 +23,6 @@ GLFWwindow* window;
 
 // Include shaders
 #include <shader.hpp>
-#include <Actor.hpp>
 #include <Camera.hpp>
 #include <Skybox.hpp>
 #include <Plane.hpp>
@@ -46,21 +45,8 @@ int height = 512;
 bool globalInit();
 GLFWwindow* initWindow();
 void initImgui();
-void setUPVAOVBO();
 
-void updateLightPosition(GLuint _lightID);
-
-bool useComputeShader;
-
-// Paramètres du bruit 
-int noiseType = 0; // 0 = Perlin, 1 = Simplex, 2 = Coherent, 3 = Diamond Square
-float scale = 1.0f; // Echelle du bruit
-float gain = 1.0f; // Gain du bruit
-int octaves = 4; // Nombre d'octaves
-float persistence = 2.0f; // Persistance du bruit
-float power = 1.0f; // Puissance du bruit
-int seed = 0; // Graine du bruit
-bool regenerate = false; // Regénérer le bruit
+void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID);
 
 
 int main(void)
@@ -72,56 +58,16 @@ int main(void)
 
     initImgui();
 
-    /*GLuint VertexArrayID;
-    glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);*/
-
     GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-    GLuint MatrixID = glGetUniformLocation(programID, "MVP");
+    if (programID == 0) {
+        std::cerr << "Failed to load shaders." << std::endl;
+        return -1;
+    }else {
+        std::cout << "Shader ok" << std::endl;
+    }
     GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
-    GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
-    GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
-    GLuint colorID = glGetUniformLocation(programID, "color_Mesh");
-
-    /*if (glewIsSupported("GL_VERSION_4_3")) {
-        computeNoiseProgram = loadComputeShader("noise_compute.glsl");
-        useComputeShader = true;
-        std::cout << "Utilisation du compute shader pour le bruit" << std::endl;
-
-        glGenTextures(1, &noiseTexture);
-        glBindTexture(GL_TEXTURE_2D, noiseTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glBindImageTexture(0, noiseTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-    } else {
-        noiseFragmentProgram = LoadShaders("noise_vertex.glsl", "noise_fragment.glsl");
-        useComputeShader = false;
-        std::cout << "Utilisation du fragment shader pour le bruit" << std::endl;
-        setUPVAOVBO();
-
-        glGenTextures(1, &noiseTexture);
-        glBindTexture(GL_TEXTURE_2D, noiseTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 200, 200, 0, GL_RGBA, GL_FLOAT, nullptr);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glGenFramebuffers(1, &noiseFramebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, noiseTexture, 0);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cerr << "Erreur : Framebuffer incomplet !" << std::endl;
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }*/
+    GLuint LightPosID = glGetUniformLocation(programID, "LightPosition_worldspace");
+    GLuint LightColorID = glGetUniformLocation(programID, "LightColor_worldspace");
 
     Camera mainCamera;
     mainCamera.init();
@@ -141,13 +87,12 @@ int main(void)
         "../data/skybox/standard_tuto/pz.jpg",
         "../data/skybox/standard_tuto/nz.jpg"
     };
-    //Skybox skybox(faces);
+    Skybox skybox(faces);
 
     // TEST PLANE
-    Plane plan_test(100.0f, 100.0f, 100, glm::vec3(0.6f, 0.5f, 0.3f), colorID);
+    Plane plan_test(10.f, 10, &mainCamera);
 
     glDisable(GL_CULL_FACE);
-
 
     do {
         float currentFrame = glfwGetTime();
@@ -162,98 +107,6 @@ int main(void)
         ImGui::NewFrame();
 
         ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-        /*ImGui::Begin("Paramètres du bruit");
-
-        const char* noiseTypes[] = { "Bruit par défaut", "Perlin", "Simplex", "Coherent", "Diamond Square" };
-        
-        static int previousNoiseType = noiseType;
-        static float previousScale = scale;
-        static float previousGain = gain;
-        static int previousOctaves = octaves;
-        static float previousPersistence = persistence;
-        static float previousPower = power;
-
-        // Les sliders et le combo pour ajuster les paramètres
-        ImGui::Combo("Type de bruit", &noiseType, noiseTypes, IM_ARRAYSIZE(noiseTypes));
-        ImGui::SliderFloat("Echelle", &scale, 1.0f, 100.0f);
-        ImGui::SliderFloat("Gain", &gain, 0.0f, 1.0f);
-        ImGui::SliderInt("Octaves", &octaves, 1, 10);
-        ImGui::SliderFloat("Persistance", &persistence, 0.3f, 0.7f);
-        ImGui::SliderFloat("Puissance", &power, 1.0f, 10.0f);
-
-        // Détection des changements de paramètres
-        bool hasChanged = (noiseType != previousNoiseType ||
-                        scale != previousScale ||
-                        gain != previousGain ||
-                        octaves != previousOctaves ||
-                        persistence != previousPersistence ||
-                        power != previousPower);
-
-        if (hasChanged || regenerate) {
-            // Mettre à jour la texture en fonction des paramètres actuels
-            if (useComputeShader) {
-                glUseProgram(computeNoiseProgram);
-                glUniform1i(glGetUniformLocation(computeNoiseProgram, "noiseType"), noiseType);
-                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noiseScale"), scale);
-                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noiseGain"), gain);
-                glUniform1i(glGetUniformLocation(computeNoiseProgram, "noiseOctaves"), octaves);
-                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noisePersistence"), persistence);
-                glUniform1f(glGetUniformLocation(computeNoiseProgram, "noisePower"), power);
-                glUniform1i(glGetUniformLocation(computeNoiseProgram, "seed"), seed);
-
-                glDispatchCompute(width / 16, height / 16, 1);
-                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-            } else {
-                glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
-                glUseProgram(noiseFragmentProgram);
-
-                glUniform1i(glGetUniformLocation(noiseFragmentProgram, "noiseType"), noiseType);
-                glUniform1f(glGetUniformLocation(noiseFragmentProgram, "noiseScale"), scale);
-                glUniform1f(glGetUniformLocation(noiseFragmentProgram, "noiseGain"), gain);
-                glUniform1i(glGetUniformLocation(noiseFragmentProgram, "noiseOctaves"), octaves);
-                glUniform1f(glGetUniformLocation(noiseFragmentProgram, "noisePersistence"), persistence);
-                glUniform1f(glGetUniformLocation(noiseFragmentProgram, "noisePower"), power);
-                glUniform1i(glGetUniformLocation(noiseFragmentProgram, "seed"), seed);
-
-                glBindVertexArray(quadVAO);
-                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            }
-
-            // Mise à jour de l'état des sliders
-            previousNoiseType = noiseType;
-            previousScale = scale;
-            previousGain = gain;
-            previousOctaves = octaves;
-            previousPersistence = persistence;
-            previousPower = power;
-
-            regenerate = false;
-        }
-        if (ImGui::Button("Regénérer")) {
-            regenerate = true;
-            seed = rand();
-        }
-        ImGui::SameLine();
-        ImGui::Text("Seed : %d", seed);
-        ImGui::End();
-
-        // Fenêtre pour l'aperçu du bruit
-        ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-        ImGui::Begin("Visualisation du bruit");
-        ImGui::Text("Aperçu du bruit généré ici...");
-        ImGui::Image((void*)(intptr_t)noiseTexture, ImVec2(200, 200));
-
-        // Boutons pour importer/exporter
-        if (ImGui::Button("Importer")) {
-            // Code d'importation
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Exporter")) {
-            // Code d'exportation
-        }
-
-        ImGui::End();*/
 
         mainCamera.update(deltaTime, window);
 
@@ -261,20 +114,14 @@ int main(void)
         glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &viewMatrix[0][0]);
 
         //View
-        updateLightPosition(LightID);
+        updateLightPosition(LightPosID, LightColorID);
 
-        //skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
+        skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
 
-        glUseProgram(programID);
-        plan_test.draw(mainCamera, ViewMatrixID, ModelMatrixID);
-        glUseProgram(0);
+        plan_test.update();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        /*glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(2);*/
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -287,17 +134,6 @@ int main(void)
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
-
-    if (useComputeShader) {
-        glDeleteProgram(computeNoiseProgram);
-    }
-    else {
-        glDeleteProgram(noiseFragmentProgram);
-        glDeleteVertexArrays(1, &quadVAO);
-        glDeleteFramebuffers(1, &noiseFramebuffer);
-    }
-
-    glDeleteTextures(1, &noiseTexture);
 
     return 0;
 }
@@ -387,8 +223,11 @@ void setUPVAOVBO(){
     glBindVertexArray(0);
 }
 
-void updateLightPosition(GLuint _lightID)
+void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID)
 {
-    const glm::vec3 lightPos = glm::vec3(4.f, 90.f, 4.f);
-    glUniform3f(_lightID, lightPos.x, lightPos.y, lightPos.z);
+    const glm::vec3 lightPos = glm::vec3(0.f, 90.f, 0.f);
+    glUniform3f(_lightPosID, lightPos.x, lightPos.y, lightPos.z);
+
+    const glm::vec3 lightColor = glm::vec3(1.f, 0.f, 0.f);
+    glUniform3f(_lightColorID, lightColor.x, lightColor.y, lightColor.z);
 }
