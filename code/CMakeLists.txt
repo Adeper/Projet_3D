@@ -58,6 +58,9 @@ set(SHADERS
     shaders/noise_vertex.glsl
     shaders/skybox_fragment.glsl
     shaders/skybox_vertex.glsl
+    shaders/normal_fragment_shader.glsl
+    shaders/normal_vertex_shader.glsl
+    shaders/normal_geometry_shader.glsl
 )
 
 # Fichiers ImGui
