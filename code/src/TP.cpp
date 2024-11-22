@@ -225,9 +225,9 @@ void setUPVAOVBO(){
 
 void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID)
 {
-    const glm::vec3 lightPos = glm::vec3(0.f, 90.f, 0.f);
+    const glm::vec3 lightPos = glm::vec3(0.f, 40.f, 0.f);
     glUniform3f(_lightPosID, lightPos.x, lightPos.y, lightPos.z);
 
-    const glm::vec3 lightColor = glm::vec3(1.f, 0.f, 0.f);
+    const glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);
     glUniform3f(_lightColorID, lightColor.x, lightColor.y, lightColor.z);
 }
