@@ -161,7 +161,8 @@ int main(void)
         terrain.update();
         
         noise.setResolution(terrain.getResolution());
-        noise.getTextureNoise();
+
+        terrain.setHeightMap(noise.getTextureNoise());
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

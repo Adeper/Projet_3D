@@ -47,7 +47,7 @@ private:
     bool isWireframe;
     bool showNormals;
 
-    GLuint VAO, VBO, EBO, UVBO, NBO, lodFBO, lodTexture;
+    GLuint VAO, VBO, EBO, UVBO, NBO, lodFBO, lodTexture, IDBO;
 
     GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID, m_lodShaderProgram;
 

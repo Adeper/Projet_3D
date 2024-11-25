@@ -281,6 +281,8 @@ void Plane::recreatePlane() {
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
     glDeleteBuffers(1, &UVBO);
+    glDeleteBuffers(1, &NBO);
+    
 
     vertices.clear();
     uvs.clear();
