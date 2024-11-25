@@ -17,6 +17,7 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     isWireframe = false;
     showNormals = false;
     heightScale = 10.0f;
+    maxLodDistance = 100.0f;
     color = glm::vec3(1.f, 1.f, 1.f);
 
     createPlaneVAO();
@@ -55,6 +56,10 @@ void Plane::draw() {
     glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
 
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
+
+    glm::vec3 cameraPos = camera_plan->getPosition();                 
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "cameraPosition"), cameraPos.x, cameraPos.y, cameraPos.z);
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
     
     glUniform3f(m_ColorID, color.x, color.y, color.z);
 
@@ -201,7 +206,7 @@ void Plane::renderLod() {
     glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
-    glUniform1f(glGetUniformLocation(m_lodShaderProgram, "lodDistance"), 100.0f); // Distance LOD
+    glUniform1f(glGetUniformLocation(m_lodShaderProgram, "lodDistance"), maxLodDistance); 
     glUniform1f(glGetUniformLocation(m_lodShaderProgram, "heightScale"), heightScale);
 
     glBindTexture(GL_TEXTURE_2D, m_heightMapID);
@@ -263,6 +268,9 @@ void Plane::showImGuiInterface() {
             }
         }
         ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
+        if (ImGui::SliderFloat("LOD Distance", &maxLodDistance, 10.0f, 500.0f)) {
+            renderLod();
+        }
         ImGui::Checkbox("Mode d'affichage", &isWireframe);
         ImGui::Checkbox("Afficher les normales", &showNormals);
     }

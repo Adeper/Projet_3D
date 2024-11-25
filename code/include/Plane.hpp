@@ -37,6 +37,7 @@ private:
     float size;
     int resolution;
     float heightScale;
+    float maxLodDistance;
 
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
