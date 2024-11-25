@@ -181,6 +181,10 @@ bool globalInit()
     return true;
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
 GLFWwindow* initWindow()
 {
     glfwWindowHint(GLFW_SAMPLES, 4);
@@ -189,18 +193,18 @@ GLFWwindow* initWindow()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-
     // Open a window and create its OpenGL context
     GLFWwindow* createdWindow = glfwCreateWindow(1500, 1000, "Projet 3D", NULL, NULL);
     if (createdWindow != NULL) {
         glfwMakeContextCurrent(createdWindow);
+
+        glfwSetFramebufferSizeCallback(createdWindow, framebuffer_size_callback);
     }
 
     std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
 
     return createdWindow;
 }
-
 
 void initImgui()
 {
