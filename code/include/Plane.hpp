@@ -27,6 +27,7 @@ private:
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void recreatePlane();
+    void calculDesNormales();
 
     Camera* camera_plan; 
 

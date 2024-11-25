@@ -77,8 +77,14 @@ void Plane::drawNormals(){
     glUniformMatrix4fv(glGetUniformLocation(m_normalShaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_normalShaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
+
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
+
     glBindVertexArray(VAO);
-    glDrawArrays(GL_POINTS, 0, vertices.size() / 3);
+    glDrawArrays(GL_POINTS, 0, indices.size() / 3);
     glBindVertexArray(0);
 }
 
@@ -133,6 +139,8 @@ void Plane::createPlaneVAO() {
         }
     }
 
+    //calculDesNormales();
+
     m_indexCount = indices.size();
 
     glGenVertexArrays(1, &VAO);
@@ -162,6 +170,76 @@ void Plane::createPlaneVAO() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
+}
+
+void Plane::calculDesNormales(){
+    for (unsigned int z = 0; z < resolution; ++z) {
+        for (unsigned int x = 0; x < resolution; ++x) {
+            unsigned int topLeft = (z + 1) * (resolution + 1) + x;
+            unsigned int topRight = topLeft + 1;
+            unsigned int bottomLeft = z * (resolution + 1) + x;
+            unsigned int bottomRight = bottomLeft + 1;
+
+            // Triangle 1 : bottomLeft -> topRight -> topLeft
+            glm::vec3 v0(vertices[bottomLeft * 3], vertices[bottomLeft * 3 + 1], vertices[bottomLeft * 3 + 2]);
+            glm::vec3 v1(vertices[topRight * 3], vertices[topRight * 3 + 1], vertices[topRight * 3 + 2]);
+            glm::vec3 v2(vertices[topLeft * 3], vertices[topLeft * 3 + 1], vertices[topLeft * 3 + 2]);
+
+            glm::vec3 edge1 = v1 - v0;
+            glm::vec3 edge2 = v2 - v0;
+            glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+            std::cout << "Triangle 1 : (" << normal.x << "," << normal.y << "," << normal.z << ")" << std::endl;
+
+            // Ajouter la normale pour les trois sommets du triangle
+            normals[bottomLeft * 3] += normal.x;
+            normals[bottomLeft * 3 + 1] += normal.y;
+            normals[bottomLeft * 3 + 2] += normal.z;
+
+            normals[topRight * 3] += normal.x;
+            normals[topRight * 3 + 1] += normal.y;
+            normals[topRight * 3 + 2] += normal.z;
+
+            normals[topLeft * 3] += normal.x;
+            normals[topLeft * 3 + 1] += normal.y;
+            normals[topLeft * 3 + 2] += normal.z;
+
+            // Triangle 2 : bottomLeft -> bottomRight -> topRight
+            v0 = glm::vec3(vertices[bottomLeft * 3], vertices[bottomLeft * 3 + 1], vertices[bottomLeft * 3 + 2]);
+            v1 = glm::vec3(vertices[bottomRight * 3], vertices[bottomRight * 3 + 1], vertices[bottomRight * 3 + 2]);
+            v2 = glm::vec3(vertices[topRight * 3], vertices[topRight * 3 + 1], vertices[topRight * 3 + 2]);
+
+            edge1 = v1 - v0;
+            edge2 = v2 - v0;
+            normal = glm::normalize(glm::cross(edge1, edge2));
+
+            std::cout << "Triangle 2 : (" << normal.x << "," << normal.y << "," << normal.z << ")" << std::endl;
+
+            // Ajouter la normale pour les trois sommets du triangle
+            normals[bottomLeft * 3] += normal.x;
+            normals[bottomLeft * 3 + 1] += normal.y;
+            normals[bottomLeft * 3 + 2] += normal.z;
+
+            normals[bottomRight * 3] += normal.x;
+            normals[bottomRight * 3 + 1] += normal.y;
+            normals[bottomRight * 3 + 2] += normal.z;
+
+            normals[topRight * 3] += normal.x;
+            normals[topRight * 3 + 1] += normal.y;
+            normals[topRight * 3 + 2] += normal.z;
+        }
+    }
+
+    // Normaliser les normales pour chaque sommet
+    for (size_t i = 0; i < normals.size(); i += 3) {
+        glm::vec3 normal(normals[i], normals[i + 1], normals[i + 2]);
+        normal = glm::normalize(normal);  // Normalisation pour chaque sommet
+        normals[i] = normal.x;
+        normals[i + 1] = normal.y;
+        normals[i + 2] = normal.z;
+
+        //std::cout << "(" << normals[i] << "," << normals[i+1] << "," << normals[i+2] << ")" << std::endl;
+    }
 }
 
 GLuint Plane::loadTexture(const std::string& texturePath) {
@@ -228,6 +306,7 @@ void Plane::recreatePlane() {
     vertices.clear();
     uvs.clear();
     indices.clear();
+    normals.clear();
 
     createPlaneVAO();
 }
