@@ -14,7 +14,8 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     size = new_size;
     resolution = new_resolution;
     camera_plan = cam;
-    isWireframe = false;
+    displayWire = false;
+    displayPoint = false;
     showNormals = false;
     heightScale = 10.0f;
     color = glm::vec3(1.f, 1.f, 1.f);
@@ -57,7 +58,12 @@ void Plane::draw() {
 
     //glBindTexture(GL_TEXTURE_2D, m_textureID);
 
-    glPolygonMode(GL_FRONT_AND_BACK, isWireframe ? GL_LINE : GL_FILL);
+    if(displayWire)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else if(displayPoint)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    else
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
@@ -172,76 +178,6 @@ void Plane::createPlaneVAO() {
     glBindVertexArray(0);
 }
 
-void Plane::calculDesNormales(){
-    for (unsigned int z = 0; z < resolution; ++z) {
-        for (unsigned int x = 0; x < resolution; ++x) {
-            unsigned int topLeft = (z + 1) * (resolution + 1) + x;
-            unsigned int topRight = topLeft + 1;
-            unsigned int bottomLeft = z * (resolution + 1) + x;
-            unsigned int bottomRight = bottomLeft + 1;
-
-            // Triangle 1 : bottomLeft -> topRight -> topLeft
-            glm::vec3 v0(vertices[bottomLeft * 3], vertices[bottomLeft * 3 + 1], vertices[bottomLeft * 3 + 2]);
-            glm::vec3 v1(vertices[topRight * 3], vertices[topRight * 3 + 1], vertices[topRight * 3 + 2]);
-            glm::vec3 v2(vertices[topLeft * 3], vertices[topLeft * 3 + 1], vertices[topLeft * 3 + 2]);
-
-            glm::vec3 edge1 = v1 - v0;
-            glm::vec3 edge2 = v2 - v0;
-            glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
-
-            std::cout << "Triangle 1 : (" << normal.x << "," << normal.y << "," << normal.z << ")" << std::endl;
-
-            // Ajouter la normale pour les trois sommets du triangle
-            normals[bottomLeft * 3] += normal.x;
-            normals[bottomLeft * 3 + 1] += normal.y;
-            normals[bottomLeft * 3 + 2] += normal.z;
-
-            normals[topRight * 3] += normal.x;
-            normals[topRight * 3 + 1] += normal.y;
-            normals[topRight * 3 + 2] += normal.z;
-
-            normals[topLeft * 3] += normal.x;
-            normals[topLeft * 3 + 1] += normal.y;
-            normals[topLeft * 3 + 2] += normal.z;
-
-            // Triangle 2 : bottomLeft -> bottomRight -> topRight
-            v0 = glm::vec3(vertices[bottomLeft * 3], vertices[bottomLeft * 3 + 1], vertices[bottomLeft * 3 + 2]);
-            v1 = glm::vec3(vertices[bottomRight * 3], vertices[bottomRight * 3 + 1], vertices[bottomRight * 3 + 2]);
-            v2 = glm::vec3(vertices[topRight * 3], vertices[topRight * 3 + 1], vertices[topRight * 3 + 2]);
-
-            edge1 = v1 - v0;
-            edge2 = v2 - v0;
-            normal = glm::normalize(glm::cross(edge1, edge2));
-
-            std::cout << "Triangle 2 : (" << normal.x << "," << normal.y << "," << normal.z << ")" << std::endl;
-
-            // Ajouter la normale pour les trois sommets du triangle
-            normals[bottomLeft * 3] += normal.x;
-            normals[bottomLeft * 3 + 1] += normal.y;
-            normals[bottomLeft * 3 + 2] += normal.z;
-
-            normals[bottomRight * 3] += normal.x;
-            normals[bottomRight * 3 + 1] += normal.y;
-            normals[bottomRight * 3 + 2] += normal.z;
-
-            normals[topRight * 3] += normal.x;
-            normals[topRight * 3 + 1] += normal.y;
-            normals[topRight * 3 + 2] += normal.z;
-        }
-    }
-
-    // Normaliser les normales pour chaque sommet
-    for (size_t i = 0; i < normals.size(); i += 3) {
-        glm::vec3 normal(normals[i], normals[i + 1], normals[i + 2]);
-        normal = glm::normalize(normal);  // Normalisation pour chaque sommet
-        normals[i] = normal.x;
-        normals[i + 1] = normal.y;
-        normals[i + 2] = normal.z;
-
-        //std::cout << "(" << normals[i] << "," << normals[i+1] << "," << normals[i+2] << ")" << std::endl;
-    }
-}
-
 GLuint Plane::loadTexture(const std::string& texturePath) {
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -291,8 +227,17 @@ void Plane::showImGuiInterface() {
             }
         }
         ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
-        ImGui::Checkbox("Mode d'affichage", &isWireframe);
         ImGui::Checkbox("Afficher les normales", &showNormals);
+
+        ImGui::Separator();
+        ImGui::Text(" === Modes d'affichage ===");
+        if(ImGui::Checkbox("Afficher les triangles", &displayWire)){
+            displayPoint = false;
+        }
+        ImGui::SameLine();
+        if(ImGui::Checkbox("Afficher les points", &displayPoint)){
+            displayWire = false;
+        }
     }
     ImGui::End();
 }

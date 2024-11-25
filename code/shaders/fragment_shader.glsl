@@ -27,5 +27,5 @@ void main() {
 
     //color = vec4(color_Mesh, 1.0);
 
-    color = vec4(mix(vec3(0.2,0.5,0.8), vec3(0.8,0.6,0.4), height), 1.0);
+    color = vec4(mix(vec3(0.2,0.5,0.8), vec3(1.,1.,1.), height), 1.0);
 }

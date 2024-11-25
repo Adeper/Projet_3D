@@ -27,7 +27,6 @@ private:
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void recreatePlane();
-    void calculDesNormales();
 
     Camera* camera_plan; 
 
@@ -41,7 +40,8 @@ private:
     std::vector<float> normals;
     glm::vec3 color;
 
-    bool isWireframe;
+    bool displayWire;
+    bool displayPoint;
     bool showNormals;
 
     GLuint VAO, VBO, EBO, UVBO, NBO;
