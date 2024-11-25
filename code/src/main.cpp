@@ -59,6 +59,11 @@ int main(void)
 
     initImgui();
 
+
+    GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+    GLuint LightPosID = glGetUniformLocation(programID, "LightPosition_worldspace");
+    GLuint LightColorID = glGetUniformLocation(programID, "LightColor_worldspace");
+
     // Création du programme de calcul
     Noise noise;
     noise.init(); // Initialisation des paramètres
@@ -71,11 +76,7 @@ int main(void)
     if (!noise.useComputeShader) {
         noise.initVAOVBO(); // Initialise le VAO et le VBO
     }
-
-    GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-    GLuint LightPosID = glGetUniformLocation(programID, "LightPosition_worldspace");
-    GLuint LightColorID = glGetUniformLocation(programID, "LightColor_worldspace");
-
+    
     Camera mainCamera;
     mainCamera.init();
 
@@ -125,7 +126,8 @@ int main(void)
         terrain.update();
         
         noise.setResolution(terrain.getResolution());
-        noise.getTextureNoise();
+        terrain.setHeightMap(noise.getTextureNoise());
+        
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
