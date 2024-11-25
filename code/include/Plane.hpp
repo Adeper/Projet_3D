@@ -28,6 +28,10 @@ private:
     void updateResolution(unsigned int newResolution);
     void recreatePlane();
 
+    void initLodFBO();
+    void renderLod();
+    void showImGuiLOD();
+
     Camera* camera_plan; 
 
     float size;
@@ -43,9 +47,9 @@ private:
     bool isWireframe;
     bool showNormals;
 
-    GLuint VAO, VBO, EBO, UVBO, NBO;
+    GLuint VAO, VBO, EBO, UVBO, NBO, lodFBO, lodTexture;
 
-    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID;
+    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID, m_lodShaderProgram;
 
     unsigned int m_indexCount;
 };

@@ -23,10 +23,13 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
 
     m_shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
     m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
+    m_lodShaderProgram = LoadShaders("lod_vertex_shader.glsl", "lod_fragment_shader.glsl");
 
     //m_textureID = loadTexture("");
 
     m_ColorID = glGetUniformLocation(m_shaderProgram, "color_Mesh");
+
+    initLodFBO();
 }
 
 Plane::~Plane() {
@@ -85,7 +88,8 @@ void Plane::drawNormals(){
 
 void Plane::update(){
     showImGuiInterface();
-
+    renderLod();
+    showImGuiLOD();
     draw();
 
     if(showNormals){
@@ -164,6 +168,52 @@ void Plane::createPlaneVAO() {
     glBindVertexArray(0);
 }
 
+void Plane::initLodFBO() {
+    glGenFramebuffers(1, &lodFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, lodFBO);
+
+    glGenTextures(1, &lodTexture);
+    glBindTexture(GL_TEXTURE_2D, lodTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lodTexture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Error while creating FBO" << std::endl;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Plane::renderLod() {
+    glBindFramebuffer(GL_FRAMEBUFFER, lodFBO);
+    glViewport(0, 0, 1024, 1024);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glUseProgram(m_lodShaderProgram);
+
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    const glm::mat4& viewMatrix = camera_plan->getViewMatrix();
+    const glm::mat4& projectionMatrix = camera_plan->getProjectionMatrix();
+
+    glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
+    glUniform1f(glGetUniformLocation(m_lodShaderProgram, "lodDistance"), 100.0f); // Distance LOD
+    glUniform1f(glGetUniformLocation(m_lodShaderProgram, "heightScale"), heightScale);
+
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glUniform1i(glGetUniformLocation(m_lodShaderProgram, "heightMap"), 0);
+
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 GLuint Plane::loadTexture(const std::string& texturePath) {
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -215,6 +265,13 @@ void Plane::showImGuiInterface() {
         ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
         ImGui::Checkbox("Mode d'affichage", &isWireframe);
         ImGui::Checkbox("Afficher les normales", &showNormals);
+    }
+    ImGui::End();
+}
+
+void Plane::showImGuiLOD() {
+    if (ImGui::Begin("LOD Preview")) {
+        ImGui::Image((void*)(intptr_t)lodTexture, ImVec2(300, 300));
     }
     ImGui::End();
 }
