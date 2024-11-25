@@ -164,6 +164,24 @@ void Camera::updateFreeInput(float _deltaTime, GLFWwindow* _window)
 	if (glfwGetKey( _window, GLFW_KEY_LEFT_SHIFT ) == GLFW_PRESS){
 		m_position -= VEC_UP * _deltaTime * m_speedTranslation;
 	}
+
+	// pitch up
+	if (glfwGetKey( _window, GLFW_KEY_UP ) == GLFW_PRESS){
+		m_eulerAngle.x -= 0.5;
+	}
+	// pitch down
+	if (glfwGetKey( _window, GLFW_KEY_DOWN ) == GLFW_PRESS){
+		m_eulerAngle.x += 0.5;
+	}
+
+	// yaw right
+	if (glfwGetKey( _window, GLFW_KEY_RIGHT ) == GLFW_PRESS){
+		m_eulerAngle.y -= 0.5;
+	}
+	// yaw left
+	if (glfwGetKey( _window, GLFW_KEY_LEFT ) == GLFW_PRESS){
+		m_eulerAngle.y += 0.5;
+	}
 }
 
 void Camera::updateFontRightUp(){
