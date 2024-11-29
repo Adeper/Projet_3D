@@ -46,8 +46,8 @@ void BezierCurve::generateCurvePoints() {
     curvePoints.clear();
 
     // Algorithme de De Casteljau
-    for (unsigned int i = 0; i <= resolution; ++i) {
-        float t = static_cast<float>(i) / resolution;
+    for (unsigned int i = 0; i <= static_cast<int>(size); ++i) {
+        float t = static_cast<float>(i) / size;
 
         std::vector<glm::vec3> temp = controlPoints;
         while (temp.size() > 1) {
@@ -60,7 +60,7 @@ void BezierCurve::generateCurvePoints() {
         }
 
         if (!temp.empty()) {
-            curvePoints.push_back(temp[0] * size);
+            curvePoints.push_back(temp[0] * static_cast<float>(resolution/10.));
         }
     }
 

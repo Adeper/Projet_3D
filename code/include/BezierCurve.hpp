@@ -10,14 +10,14 @@
 
 class BezierCurve {
 private:
-    std::vector<glm::vec3> controlPoints; // Points de contrôle
-    std::vector<glm::vec3> curvePoints;   // Points calculés de la courbe
-    unsigned int resolution;              // Résolution de la courbe
+    std::vector<glm::vec3> controlPoints;
+    std::vector<glm::vec3> curvePoints;
+    unsigned int resolution;
     float size;
-    GLuint VAO, VBO;                      // Buffers pour OpenGL
-    GLuint shaderProgram;                 // Programme shader utilisé
+    GLuint VAO, VBO;
+    GLuint shaderProgram;
 
-    void generateCurvePoints();           // Calcul des points de la courbe
+    void generateCurvePoints();
 
 public:
     BezierCurve(unsigned int res = 50, float sz = 10);
