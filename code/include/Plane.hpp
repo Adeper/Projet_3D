@@ -16,7 +16,8 @@ public:
     void drawNormals();
     void update();
 
-    int getResolution();
+    int getResolution() const;
+    float getSize() const;
 
     void setHeightMap(GLuint heightMapID);
 

@@ -256,8 +256,12 @@ void Plane::recreatePlane() {
     createPlaneVAO();
 }
 
-int Plane::getResolution(){
+int Plane::getResolution() const{
     return resolution;
+}
+
+float Plane::getSize() const{
+    return size;
 }
 
 void Plane::setHeightMap(GLuint heightMapID){

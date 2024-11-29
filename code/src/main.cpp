@@ -27,6 +27,7 @@ GLFWwindow* window;
 #include <Skybox.hpp>
 #include <Plane.hpp>
 #include <Noise.hpp>
+#include <BezierCurve.hpp>
 
 // Paramètres de la caméra
 const unsigned int SCR_WIDTH = 800;
@@ -99,6 +100,11 @@ int main(void)
 
     Plane terrain(10.f, 10, &mainCamera);
 
+    BezierCurve chemin(terrain.getResolution(), terrain.getSize());
+    chemin.addControlPoint(glm::vec3(-5.0f, 0.0f, -5.0f));
+    chemin.addControlPoint(glm::vec3(0.0f, 2.0f, 0.0f));
+    chemin.addControlPoint(glm::vec3(5.0f, 0.0f, 5.0f));
+
     glDisable(GL_CULL_FACE);
 
     do {
@@ -121,13 +127,19 @@ int main(void)
         //View
         updateLightPosition(LightPosID, LightColorID);
 
-        skybox.draw(mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix());
+        glm::mat4 viewMatrix = mainCamera.getViewMatrix();
+        glm::mat4 projMatrix = mainCamera.getProjectionMatrix();
+
+        skybox.draw(viewMatrix, projMatrix);
 
         terrain.update();
+
         
         noise.setResolution(terrain.getResolution());
         terrain.setHeightMap(noise.getTextureNoise());
         
+        chemin.update(terrain.getSize(), terrain.getResolution());
+        chemin.draw(viewMatrix, projMatrix);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
