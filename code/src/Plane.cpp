@@ -22,7 +22,7 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
 
     createPlaneVAO();
 
-    m_shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+    m_shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl", "lod_geometry_shader.glsl");
     m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
     m_lodShaderProgram = LoadShaders("lod_vertex_shader.glsl", "lod_fragment_shader.glsl");
 
@@ -41,8 +41,10 @@ Plane::~Plane() {
 }
 
 void Plane::draw() {
+
     glUseProgram(m_shaderProgram);
 
+    // Matrices de transformation
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     const glm::mat4& viewMatrix = camera_plan->getViewMatrix();
     const glm::mat4& projectionMatrix = camera_plan->getProjectionMatrix();
@@ -51,26 +53,31 @@ void Plane::draw() {
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
 
+    // Hauteur et texture du heightMap
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_heightMapID);
     glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
-
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
 
-    glm::vec3 cameraPos = camera_plan->getPosition();                 
+    // Transmettre la position de la caméra
+    glm::vec3 cameraPos = camera_plan->getPosition(); // Récupérer la position de la caméra
     glUniform3f(glGetUniformLocation(m_shaderProgram, "cameraPosition"), cameraPos.x, cameraPos.y, cameraPos.z);
+
+    // Transmettre la distance maximale du LOD
     glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
-    
+
+    // Couleur du maillage
     glUniform3f(m_ColorID, color.x, color.y, color.z);
 
-    //glBindTexture(GL_TEXTURE_2D, m_textureID);
-
+    // Mode fil de fer ou rempli
     glPolygonMode(GL_FRONT_AND_BACK, isWireframe ? GL_LINE : GL_FILL);
 
+    // Dessiner les triangles
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
+    // Réinitialiser le mode de polygone
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 

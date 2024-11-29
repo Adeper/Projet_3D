@@ -6,26 +6,35 @@ layout(location = 1) in vec2 uv;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform float lodDistance; // Distance de LOD pour ajuster les détails
+uniform sampler2D heightMap;
+uniform float heightScale;
+uniform float lodDistance;
 
 out vec2 fragUV;
-out float distanceFactor; // Facteur de distance pour LOD
+out float distanceFactor; 
 
 void main() {
-    // Calcul de la distance normalisée entre la caméra et le vertex
-    float distance = length((view * model * vec4(position, 1.0)).xyz);
+
+    mat4 proj = projection;
+    proj[1][1] = -proj[1][1];
+
+    // Charger la hauteur depuis la texture
+    float height = texture(heightMap, uv).r;
+
+    // Calculer la position dans l'espace monde avec la hauteur
+    vec3 pos = position;
+    pos.y = height * heightScale;
+
+
+    // Calculer la distance entre la caméra et le sommet
+    vec3 viewPos = (view * model * vec4(pos, 1.0)).xyz;
+    float distance = length(viewPos);
+
+    // Calculer un facteur LOD basé sur la distance
     distanceFactor = clamp(1.0 - distance / lodDistance, 0.0, 1.0);
 
-    // Si la distance dépasse une certaine limite, "supprimer" le sommet
-    if (distance > lodDistance) {
-        gl_Position = vec4(0.0, 0.0, 0.0, 0.0); // Déplacer hors écran
-    } else {
-        // Ajustement de la position en fonction du LOD
-        vec3 adjustedPosition = position;
-        adjustedPosition.y *= distanceFactor;
-
-        gl_Position = projection * view * model * vec4(adjustedPosition, 1.0);
-    }
+    // Ne cacher aucun sommet, tous sont visibles
+    gl_Position = proj * view * model * vec4(pos, 1.0);
 
     fragUV = uv;
 }

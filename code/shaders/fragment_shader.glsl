@@ -12,6 +12,7 @@ uniform vec3 color_Mesh;
 uniform sampler2D heightmap;
 
 void main() {
+    
     float height = texture(heightmap, UV).r;
     vec3 norm = normalize(Normal);
 
@@ -22,10 +23,6 @@ void main() {
     vec3 diffuse = diff * LightColor_worldspace;
 
     vec3 result = diffuse * color_Mesh;
-
-    //color = vec4(result, 1.0);
-
-    //color = vec4(color_Mesh, 1.0);
 
     color = vec4(mix(vec3(0.2,0.5,0.8), vec3(0.8,0.6,0.4), height), 1.0);
 }

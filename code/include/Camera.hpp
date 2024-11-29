@@ -23,6 +23,7 @@ public:
 	void keybordRotation(float _deltaTime, GLFWwindow* window);
 
 	glm::vec3 getPosition() const;
+	glm::vec3 getFront() const;
 
 	glm::quat getRotation() const {return m_rotation;}
 	glm::mat4 getViewMatrix() const {return m_viewMatrix;}

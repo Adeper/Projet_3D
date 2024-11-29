@@ -9,19 +9,18 @@ uniform float heightScale;   // Échelle de hauteur
 out vec4 fragColor;
 
 void main() {
-    // Récupération de la hauteur depuis la texture
+    
     float height = texture(heightMap, fragUV).r * heightScale;
 
-    // Définition des couleurs selon les niveaux de détail
+    
     vec3 color;
     if (distanceFactor > 0.66) {
-        color = vec3(0.0, 1.0, 0.0); // Vert (LOD élevé)
+        color = vec3(0.0, 1.0, 0.0); // Vert (proche, LOD élevé)
     } else if (distanceFactor > 0.33) {
-        color = vec3(1.0, 1.0, 0.0); // Jaune (LOD moyen)
+        color = vec3(1.0, 1.0, 0.0); // Jaune (moyen, LOD intermédiaire)
     } else {
-        color = vec3(1.0, 0.0, 0.0); // Rouge (LOD faible)
+        color = vec3(1.0, 0.0, 0.0); // Rouge (loin, LOD faible)
     }
 
-    // Appliquer la hauteur sur la teinte
-    fragColor = vec4(color * height, 1.0);
+    fragColor = vec4(color * (0.5 + height * 0.5), 1.0);
 }
