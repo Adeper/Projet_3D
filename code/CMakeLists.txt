@@ -20,6 +20,10 @@ endif()
 # Compilation des dépendances externes
 add_subdirectory(external)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Inclure les chemins nécessaires
 include_directories(
     external/glfw-3.1.2/include/
@@ -88,6 +92,8 @@ add_executable(ProceduralGeneration
 target_link_libraries(ProceduralGeneration
     ${ALL_LIBS}
 )
+
+target_link_libraries(ProceduralGeneration stdc++fs)
 
 # Configuration des dossiers de travail pour Xcode et Visual Studio
 set_target_properties(ProceduralGeneration PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/")
