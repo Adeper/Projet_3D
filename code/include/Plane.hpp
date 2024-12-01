@@ -52,6 +52,14 @@ private:
 
     GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID, m_lodShaderProgram;
 
+    GLuint m_grassTextureID;
+    GLuint m_rockTextureID;
+    GLuint m_snowTextureID;
+
+    float grassLimit;
+    float rockLimit;
+
+
     unsigned int m_indexCount;
 };
 

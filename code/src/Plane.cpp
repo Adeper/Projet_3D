@@ -26,7 +26,12 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
     m_lodShaderProgram = LoadShaders("lod_vertex_shader.glsl", "lod_fragment_shader.glsl");
 
-    //m_textureID = loadTexture("");
+    m_grassTextureID = loadTexture("../textures/grass.png");
+    m_rockTextureID = loadTexture("../textures/rock.png");
+    m_snowTextureID = loadTexture("../textures/snowrocks.png");
+
+    grassLimit = 0.4f;
+    rockLimit = 0.7f;
 
     m_ColorID = glGetUniformLocation(m_shaderProgram, "color_Mesh");
 
@@ -57,6 +62,20 @@ void Plane::draw() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_heightMapID);
     glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
+
+    // Lier les textures pour herbe, rocher et neige
+    // glActiveTexture(GL_TEXTURE1);
+    // glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
+    // glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
+
+    // glActiveTexture(GL_TEXTURE2);
+    // glBindTexture(GL_TEXTURE_2D, m_rockTextureID);
+    // glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), 2);
+
+    // glActiveTexture(GL_TEXTURE3);
+    // glBindTexture(GL_TEXTURE_2D, m_snowTextureID);
+    // glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
+
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
 
     // Transmettre la position de la caméra
@@ -231,7 +250,7 @@ GLuint Plane::loadTexture(const std::string& texturePath) {
     glGenTextures(1, &textureID);
 
     int width, height, nrChannels;
-    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, STBI_rgb);
 
     if (data) {
         GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
@@ -243,8 +262,12 @@ GLuint Plane::loadTexture(const std::string& texturePath) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        std::cout << "Texture loaded: " << texturePath
+              << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
     } else {
         std::cerr << "Failed to load texture: " << texturePath << std::endl;
+        return 0;
     }
 
     stbi_image_free(data);
@@ -278,6 +301,9 @@ void Plane::showImGuiInterface() {
         if (ImGui::SliderFloat("LOD Distance", &maxLodDistance, 10.0f, 500.0f)) {
             renderLod();
         }
+        ImGui::SliderFloat("Grass Limit", &grassLimit, -1.0f, 1.0f);
+        ImGui::SliderFloat("Rock Limit", &rockLimit, -1.0f, 1.0f);
+
         ImGui::Checkbox("Mode d'affichage", &isWireframe);
         ImGui::Checkbox("Afficher les normales", &showNormals);
     }
