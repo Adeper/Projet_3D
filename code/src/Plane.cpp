@@ -26,8 +26,6 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
 
     //m_textureID = loadTexture("");
-
-    m_ColorID = glGetUniformLocation(m_shaderProgram, "color_Mesh");
 }
 
 Plane::~Plane() {
@@ -54,7 +52,7 @@ void Plane::draw() {
 
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
     
-    glUniform3f(m_ColorID, color.x, color.y, color.z);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "color_Mesh"), color.r, color.g, color.b);
 
     //glBindTexture(GL_TEXTURE_2D, m_textureID);
 
@@ -144,8 +142,6 @@ void Plane::createPlaneVAO() {
             indices.push_back(topRight);
         }
     }
-
-    //calculDesNormales();
 
     m_indexCount = indices.size();
 
@@ -262,6 +258,10 @@ int Plane::getResolution() const{
 
 float Plane::getSize() const{
     return size;
+}
+
+float Plane::getHeightScale() const{
+    return heightScale;
 }
 
 void Plane::setHeightMap(GLuint heightMapID){

@@ -18,6 +18,7 @@ public:
 
     int getResolution() const;
     float getSize() const;
+    float getHeightScale() const;
 
     void setHeightMap(GLuint heightMapID);
 
@@ -47,7 +48,7 @@ private:
 
     GLuint VAO, VBO, EBO, UVBO, NBO;
 
-    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID;
+    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID;
 
     unsigned int m_indexCount;
 };
