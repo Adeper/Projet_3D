@@ -19,7 +19,7 @@ uniform vec3 color_Mesh;
 out vec4 color;
 
 void main() {
-    vec3 LightPosition_worldspace = vec3(0.f, 1.f, 0.f);
+    vec3 LightPosition_worldspace = vec3(0.f, 10.f, 0.f);
     vec3 LightColor_worldspace = vec3(1.0f, 1.0f, 1.0f);
 
 
@@ -49,7 +49,7 @@ void main() {
     vec3 result = ambient + diffuse + specular;
     //color = vec4(result, 1.0);
 
-    color = vec4(specular, 1.0);
+    color = vec4(result, 1.0);
 
     //color = vec4(norm, 1.0);
 }
