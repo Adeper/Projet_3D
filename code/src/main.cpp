@@ -48,9 +48,6 @@ bool globalInit();
 GLFWwindow* initWindow();
 void initImgui();
 
-void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID);
-
-
 int main(void)
 {
     if (!globalInit())
@@ -60,10 +57,7 @@ int main(void)
 
     initImgui();
 
-
     GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-    GLuint LightPosID = glGetUniformLocation(programID, "LightPosition_worldspace");
-    GLuint LightColorID = glGetUniformLocation(programID, "LightColor_worldspace");
     GLuint viewPosLoc = glGetUniformLocation(programID, "ViewPosition");
 
     // Création du programme de calcul
@@ -126,7 +120,6 @@ int main(void)
         glm::vec3 cameraPos = mainCamera.getPosition();
 
         //View
-        updateLightPosition(LightPosID, LightColorID);
         glUniform3fv(viewPosLoc, 1, &cameraPos[0]);
 
         glm::mat4 viewMatrix = mainCamera.getViewMatrix();
@@ -135,15 +128,14 @@ int main(void)
         skybox.draw(viewMatrix, projMatrix);
 
         terrain.update();
-
         
         noise.setResolution(terrain.getResolution());
         terrain.setHeightMap(noise.getTextureNoise());
-
-        //chemin.getTextureData(noise.getTextureNoise());
         
         chemin.update(terrain.getSize(), terrain.getResolution(), terrain.getHeightScale());
+        
         chemin.draw(viewMatrix, projMatrix);
+
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -230,13 +222,4 @@ void initImgui()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-}
-
-void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID)
-{
-    const glm::vec3 lightPos = glm::vec3(0.f, 10.f, 0.f);
-    glUniform3f(_lightPosID, lightPos.x, lightPos.y, lightPos.z);
-
-    const glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    glUniform3f(_lightColorID, lightColor.x, lightColor.y, lightColor.z);
 }

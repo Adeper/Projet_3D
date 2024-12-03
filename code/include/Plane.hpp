@@ -29,6 +29,8 @@ private:
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void recreatePlane();
+    void initLight();
+    void updateLightRotation();
 
     Camera* camera_plan; 
 
@@ -45,6 +47,12 @@ private:
     bool displayWire;
     bool displayPoint;
     bool showNormals;
+
+    /*==Variables de la lumière==*/
+    glm::vec3 lightDirection;
+    glm::vec3 lightColor;
+    glm::vec3 ambientColor;
+    float lightRotationAngle;
 
     GLuint VAO, VBO, EBO, UVBO, NBO;
 

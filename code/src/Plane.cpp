@@ -25,6 +25,7 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     m_shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
     m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
 
+    initLight();
     //m_textureID = loadTexture("");
 }
 
@@ -53,6 +54,11 @@ void Plane::draw() {
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
     
     glUniform3f(glGetUniformLocation(m_shaderProgram, "color_Mesh"), color.r, color.g, color.b);
+
+    // Les lights
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightDirection"), lightDirection.r, lightDirection.g, lightDirection.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightColor"), lightColor.r, lightColor.g, lightColor.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
 
     //glBindTexture(GL_TEXTURE_2D, m_textureID);
 
@@ -97,6 +103,7 @@ void Plane::update(){
     showImGuiInterface();
 
     draw();
+    updateLightRotation();
 
     if(showNormals){
         drawNormals();
@@ -223,7 +230,6 @@ void Plane::showImGuiInterface() {
             }
         }
         ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
-        ImGui::Checkbox("Afficher les normales", &showNormals);
 
         ImGui::Separator();
         ImGui::Text(" === Modes d'affichage ===");
@@ -234,6 +240,10 @@ void Plane::showImGuiInterface() {
         if(ImGui::Checkbox("Afficher les points", &displayPoint)){
             displayWire = false;
         }
+        ImGui::Checkbox("Afficher les normales", &showNormals);
+
+        ImGui::Text(" === Lumière ===");
+        ImGui::SliderFloat("Angle rotation", &lightRotationAngle, -180.0f, 180.0f);
     }
     ImGui::End();
 }
@@ -250,6 +260,20 @@ void Plane::recreatePlane() {
     normals.clear();
 
     createPlaneVAO();
+}
+
+void Plane::initLight(){
+    lightDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+    lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    ambientColor = glm::vec3(0.2f, 0.2f, 0.2f);
+
+    lightRotationAngle = 0.0f;
+}
+
+void Plane::updateLightRotation(){
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(lightRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    lightDirection = glm::vec3(rotationMatrix * glm::vec4(glm::vec3(0.0f, -1.0f, -1.0f), 0.0f));
 }
 
 int Plane::getResolution() const{
