@@ -64,17 +64,18 @@ void Plane::draw() {
     glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
 
     // Lier les textures pour herbe, rocher et neige
-    // glActiveTexture(GL_TEXTURE1);
-    // glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
-    // glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
+    // MARCHE PAS
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
 
-    // glActiveTexture(GL_TEXTURE2);
-    // glBindTexture(GL_TEXTURE_2D, m_rockTextureID);
-    // glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), 2);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, m_rockTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), 2);
 
-    // glActiveTexture(GL_TEXTURE3);
-    // glBindTexture(GL_TEXTURE_2D, m_snowTextureID);
-    // glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, m_snowTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
 
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
 
@@ -84,6 +85,10 @@ void Plane::draw() {
 
     // Transmettre la distance maximale du LOD
     glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
+
+    //Transmettre les limites de mon truc
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "rockLimit"), rockLimit);
 
     // Couleur du maillage
     glUniform3f(m_ColorID, color.x, color.y, color.z);
@@ -245,33 +250,61 @@ void Plane::renderLod() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-GLuint Plane::loadTexture(const std::string& texturePath) {
-    GLuint textureID;
-    glGenTextures(1, &textureID);
+// GLuint Plane::loadTexture(const std::string& texturePath) {
+//     GLuint textureID;
+//     glGenTextures(1, &textureID);
+
+//     int width, height, nrChannels;
+//     unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, STBI_rgb);
+
+//     if (data) {
+//         GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
+//         glBindTexture(GL_TEXTURE_2D, textureID);
+//         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+//         glGenerateMipmap(GL_TEXTURE_2D);
+
+//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+//         std::cout << "Texture loaded: " << texturePath
+//               << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
+//     } else {
+//         std::cerr << "Failed to load texture: " << texturePath << std::endl;
+//         return 0;
+//     }
+
+//     stbi_image_free(data);
+//     return textureID;
+// }
+
+GLuint Plane::loadTexture(const std::string &path)
+{
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
 
     int width, height, nrChannels;
-    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, STBI_rgb);
+    unsigned char *data = stbi_load(path.c_str(), &width, &height, &nrChannels, 3);
 
-    if (data) {
-        GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        std::cout << "Texture loaded: " << texturePath
-              << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
-    } else {
-        std::cerr << "Failed to load texture: " << texturePath << std::endl;
-        return 0;
+    if (!data)
+    {
+        stbi_image_free(data);
+        throw std::runtime_error("Failed to load texture: " + path);
     }
 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(data);
-    return textureID;
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    return texture;
 }
 
 void Plane::showImGuiInterface() {

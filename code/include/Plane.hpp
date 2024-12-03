@@ -22,7 +22,7 @@ public:
 
 private:
     void createPlaneVAO();
-    GLuint loadTexture(const std::string& texturePath);
+    GLuint loadTexture(const std::string &path);
     void showImGuiInterface();
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
