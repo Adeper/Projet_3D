@@ -64,6 +64,9 @@ set(SHADERS
     shaders/normal_geometry_shader.glsl
     shaders/bezier_vertex_shader.glsl
     shaders/bezier_fragment_shader.glsl
+    shaders/lod_vertex_shader.glsl
+    shaders/lod_fragment_shader.glsl
+    shaders/lod_geometry_shader.glsl
 )
 
 # Fichiers ImGui

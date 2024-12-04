@@ -1,31 +1,40 @@
 #version 330 core
 
-in vec2 UV;
-in vec3 Normal;
-in vec3 FragPos;
+in vec2 outUV;           // Coordonnées outUV
+in vec3 FragPos;      // Position du fragment dans l'espace monde  
+
+in float outHeight;      // Hauteur interpolée depuis le vertex shader
 
 out vec4 color;
 
-uniform vec3 LightPosition_worldspace;
-uniform vec3 LightColor_worldspace;
-uniform vec3 color_Mesh;
-uniform sampler2D heightmap;
+
+uniform sampler2D heightMap;
+uniform sampler2D grassTexture;  // Texture pour les herbes
+uniform sampler2D rockTexture;   // Texture pour les rochers
+uniform sampler2D snowTexture;   // Texture pour la neige
+
+uniform float heightScale;
+
+uniform float grassLimit;
+uniform float rockLimit;
 
 void main() {
-    float height = texture(heightmap, UV).r;
-    vec3 norm = normalize(Normal);
 
-    vec3 lightDir = normalize(LightPosition_worldspace - FragPos);
 
-    float diff = max(dot(norm, lightDir), 0.0);
+    vec4 grassColor = texture(grassTexture, outUV);
+    vec4 rockColor = texture(rockTexture, outUV);
+    vec4 snowColor = texture(snowTexture, outUV);
+    
+    vec4 terrainColor;
+    if (outHeight < grassLimit * heightScale) {
+        terrainColor = grassColor;
+    } else if (outHeight < rockLimit * heightScale) {
+        float t = ((outHeight/heightScale) - grassLimit) / (rockLimit - grassLimit);
+        terrainColor = mix(grassColor, rockColor, t);
+    } else {
+        float t = ((outHeight/heightScale) - rockLimit) / (1.0 - rockLimit);
+        terrainColor = mix(rockColor, snowColor, t);
+    }
 
-    vec3 diffuse = diff * LightColor_worldspace;
-
-    vec3 result = diffuse * color_Mesh;
-
-    //color = vec4(result, 1.0);
-
-    //color = vec4(color_Mesh, 1.0);
-
-    color = vec4(mix(vec3(0.2,0.5,0.8), vec3(1.,1.,1.), height), 1.0);
+    color = terrainColor;
 }

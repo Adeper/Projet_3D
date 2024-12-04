@@ -7,6 +7,7 @@ layout(location = 1) in vec2 vertexUV;
 out vec2 UV;
 //out vec3 Normal;
 out vec3 FragPos;
+out float height;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -15,15 +16,16 @@ uniform sampler2D heightMap;
 uniform float heightScale;
 
 void main() {
-    float height = texture(heightMap, vertexUV).r;
+    float height_ = texture(heightMap, vertexUV).r;
 
     vec3 position = vertexPosition;
-    position.y = height * heightScale;
-
+    position.y = height_ * heightScale;
+    
     gl_Position = projection * view * model * vec4(position, 1.0);
 	FragPos = vec3(model * vec4(position, 1.0));
     
 	//Normal = mat3(transpose(inverse(model))) * aNormal;
 
     UV = vertexUV;
+    height = position.y;
 }

@@ -243,3 +243,12 @@ void Camera::mouseRotation(float _deltaTime, GLFWwindow* window) {
     m_eulerAngle.x += delta.y * m_speedRotation * m_mode_axe_Vertical; //pitch
     m_eulerAngle.y -= delta.x * m_speedRotation * m_mode_axe_Horizontal; //yaw
 }
+
+glm::vec3 Camera::getPosition() const{
+	return m_position;
+}
+
+glm::vec3 Camera::getFront() const{
+	return m_front;
+}
+

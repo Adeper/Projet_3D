@@ -37,6 +37,11 @@ const unsigned int SCR_HEIGHT = 600;
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
+double lastTime = glfwGetTime(); // Temps écoulé depuis le début
+int nbFrames = 0;               // Compteur de frames
+int fps = 0;                    // FPS calculés pour affichage
+
+
 GLuint computeNoiseProgram, vertexNoiseProgram, fragmentNoiseProgram;
 GLuint noiseTexture; 
 GLuint noiseFramebuffer, noiseFragmentProgram, quadVAO, quadVBO;
@@ -112,12 +117,43 @@ int main(void)
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        // Calcul des FPS
+        nbFrames++;
+        if (currentFrame - lastTime >= 1.0) { // Compte les FPS chaque seconde
+            fps = nbFrames;
+            nbFrames = 0;
+            lastTime += 1.0;
+        }
+
         // Nettoyage avant de dessiner
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        ImGui::SetNextWindowBgAlpha(0.35f); // Transparence de la fenêtre
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always); // Position : haut-gauche
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.0f); // Coins arrondis
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 5)); // Espacement interne
+
+        ImGui::Begin("Overlay", NULL, 
+            ImGuiWindowFlags_NoDecoration | 
+            ImGuiWindowFlags_AlwaysAutoResize | 
+            ImGuiWindowFlags_NoSavedSettings | 
+            ImGuiWindowFlags_NoFocusOnAppearing | 
+            ImGuiWindowFlags_NoNav);
+
+        // Choisir une couleur en fonction des FPS
+        if (fps > 60)
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "FPS: %d", fps); // Vert pour > 60 FPS
+        else if (fps > 30)
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "FPS: %d", fps); // Jaune pour 30-60 FPS
+        else
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "FPS: %d", fps); // Rouge pour < 30 FPS
+
+        ImGui::End();
+        ImGui::PopStyleVar(2); // Revenir aux styles par défaut
 
         noise.parametersInterface(); // Interface ImGui pour les paramètres du bruit
         noise.noiseInterface(); // Affiche la texture dans l'interface ImGui
