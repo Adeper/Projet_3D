@@ -4,11 +4,13 @@ layout(triangles) in; // Entrée : 1 triangle
 layout(triangle_strip, max_vertices = 27) out; // Sortie : 9 triangles (27 sommets)
 
 in vec2 UV[]; 
-in vec3 FragPos[]; 
+in vec3 FragPos[];
+in vec3 Normal[]; 
 in float height[];
 
 out vec2 outUV; // Coordonnées UV à transmettre
 out vec3 outFragPos; // Position des sommets à transmettre
+out vec3 outNormal;
 out float outHeight;
 
 uniform vec3 cameraPosition; // Position de la caméra
@@ -36,6 +38,16 @@ void main() {
 
     float heightG = (height[0] + height[1] + height[2]) / 3.0;
 
+    // Normales :
+    vec3 normalA = Normal[0];
+    vec3 normalB = Normal[1];
+    vec3 normalC = Normal[2];
+    
+    vec3 normalM1 = normalize((Normal[0] + Normal[1]) / 2.0);
+    vec3 normalM2 = normalize((Normal[1] + Normal[2]) / 2.0);
+    vec3 normalM3 = normalize((Normal[0] + Normal[2]) / 2.0);
+    vec3 normalG = normalize((Normal[0] + Normal[1] + Normal[2]) / 3.0);
+
     // Si suffisamment proche, on subdivise
     if (lodFactor > 0.33 && lodFactor <= 0.66) {
         // Sommets d'entrée
@@ -56,18 +68,22 @@ void main() {
         // Triangle 1 : A-M1-M3
         gl_Position = projection * view * model * vec4(A, 1.0); // A
         outFragPos = A;
+        outNormal = normalA;
         outUV = UV[0];
         outHeight = heightA;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M1, 1.0); // M1
         outFragPos = M1;
+        outNormal = normalM1;
         outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M3, 1.0); // M3
         outFragPos = M3;
+        outNormal = normalM3;
+        outHeight = heightM3;
         outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
@@ -77,18 +93,21 @@ void main() {
         // Triangle 2 : M1-B-M2
         gl_Position = projection * view * model * vec4(M1, 1.0); // M1
         outFragPos = M1;
+        outNormal = normalM1;
         outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(B, 1.0); // B
         outFragPos = B;
+        outNormal = normalB;
         outHeight = heightB;
         outUV = UV[1];
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M2, 1.0); // M2
         outFragPos = M2;
+        outNormal = normalM2;
         outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
@@ -98,18 +117,21 @@ void main() {
         // Triangle 3 : M3-M2-C
         gl_Position = projection * view * model * vec4(M3, 1.0); // M3
         outFragPos = M3;
+        outNormal = normalM3;
         outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M2, 1.0); // M2
         outFragPos = M2;
+        outNormal = normalM2;
         outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(C, 1.0); // C
         outFragPos = C;
+        outNormal = normalC;
         outUV = UV[2];
         EmitVertex();
 
@@ -118,18 +140,21 @@ void main() {
         // Triangle 4 : M1-M2-M3 (centre)
         gl_Position = projection * view * model * vec4(M1, 1.0); // M1
         outFragPos = M1;
+        outNormal = normalM1;
         outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M2, 1.0); // M2
         outFragPos = M2;
+        outNormal = normalM2;
         outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M3, 1.0); // M3
         outFragPos = M3;
+        outNormal = normalM3;
         outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
@@ -157,151 +182,205 @@ void main() {
 
         // Triangle 1 : A-M1-G
         gl_Position = projection * view * model * vec4(A, 1.0);
-        outFragPos = A; outUV = UV[0];
+        outFragPos = A;
+        outNormal = normalA;
+        outUV = UV[0];
         outHeight = heightA;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M1, 1.0);
-        outFragPos = M1; outUV = uvM1;
+        outFragPos = M1;
+        outNormal = normalM1;
+        outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 2 : M1-B-G
         gl_Position = projection * view * model * vec4(M1, 1.0);
-        outFragPos = M1; outUV = uvM1;
+        outFragPos = M1;
+        outNormal = normalM1;
+        outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(B, 1.0);
-        outFragPos = B; outUV = UV[1];
+        outFragPos = B;
+        outNormal = normalB;
+        outUV = UV[1];
         outHeight = heightB;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 3 : B-M2-G
         gl_Position = projection * view * model * vec4(B, 1.0);
-        outFragPos = B; outUV = UV[1];
+        outFragPos = B;
+        outNormal = normalB;
+        outUV = UV[1];
         outHeight = heightB;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M2, 1.0);
-        outFragPos = M2; outUV = uvM2;
+        outFragPos = M2;
+        outNormal = normalM2;
+        outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 4 : M2-C-G
         gl_Position = projection * view * model * vec4(M2, 1.0);
-        outFragPos = M2; outUV = uvM2;
+        outFragPos = M2;
+        outNormal = normalM2;
+        outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(C, 1.0);
-        outFragPos = C; outUV = UV[2];
+        outFragPos = C;
+        outNormal = normalC;
+        outUV = UV[2];
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 5 : C-M3-G
         gl_Position = projection * view * model * vec4(C, 1.0);
-        outFragPos = C; outUV = UV[2];
+        outFragPos = C;
+        outNormal = normalC;
+        outUV = UV[2];
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M3, 1.0);
-        outFragPos = M3; outUV = uvM3;
+        outFragPos = M3;
+        outNormal = normalM3;
+        outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 6 : M3-A-G
         gl_Position = projection * view * model * vec4(M3, 1.0);
-        outFragPos = M3; outUV = uvM3;
+        outFragPos = M3;
+        outNormal = normalM3;
+        outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(A, 1.0);
-        outFragPos = A; outUV = UV[0];
+        outFragPos = A;
+        outNormal = normalA;
+        outUV = UV[0];
         outHeight = heightA;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 7 : M1-M3-G
         gl_Position = projection * view * model * vec4(M1, 1.0);
-        outFragPos = M1; outUV = uvM1;
+        outFragPos = M1;
+        outNormal = normalM1;
+        outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M3, 1.0);
-        outFragPos = M3; outUV = uvM3;
+        outFragPos = M3;
+        outNormal = normalM3;
+        outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG; outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 8 : M1-M2-G
         gl_Position = projection * view * model * vec4(M1, 1.0);
-        outFragPos = M1; outUV = uvM1;
+        outFragPos = M1;
+        outNormal = normalM1;
+        outUV = uvM1;
         outHeight = heightM1;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M2, 1.0);
-        outFragPos = M2; outUV = uvM2;
+        outFragPos = M2;
+        outNormal = normalM2;
+        outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
         EndPrimitive();
 
         // Triangle 9 : M2-M3-G
         gl_Position = projection * view * model * vec4(M2, 1.0);
-        outFragPos = M2; outUV = uvM2;
+        outFragPos = M2;
+        outNormal = normalM2;
+        outUV = uvM2;
         outHeight = heightM2;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(M3, 1.0);
-        outFragPos = M3; outUV = uvM3;
+        outFragPos = M3;
+        outNormal = normalM3;
+        outUV = uvM3;
         outHeight = heightM3;
         EmitVertex();
 
         gl_Position = projection * view * model * vec4(G, 1.0);
-        outFragPos = G; outUV = uvG;
+        outFragPos = G;
+        outNormal = normalG;
+        outUV = uvG;
         outHeight = heightG;
         EmitVertex();
 
@@ -312,6 +391,7 @@ void main() {
         for (int i = 0; i < 3; i++) {
             gl_Position = gl_in[i].gl_Position;
             outFragPos = FragPos[i];
+            outNormal = Normal[i];
             outUV = UV[i];
             outHeight = height[i];
             EmitVertex();

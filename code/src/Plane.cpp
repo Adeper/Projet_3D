@@ -140,8 +140,8 @@ void Plane::drawNormals(){
 
 void Plane::update(){
     showImGuiInterface();
-    renderLod();
-    showImGuiLOD();
+    //renderLod();
+    //showImGuiLOD();
     draw();
     updateLightRotation();
 

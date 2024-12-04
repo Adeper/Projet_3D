@@ -2,7 +2,7 @@
 
 in vec3 FragPos;
 in vec2 outUV;           // Coordonnées outUV
-in vec3 Normal;
+in vec3 outNormal;
 in float outHeight;      // Hauteur interpolée depuis le vertex shader
 
 out vec4 FragColor;
@@ -25,7 +25,7 @@ uniform float rockLimit;
 
 void main() {
 
-    vec3 norm = normalize(Normal);
+    vec3 norm = normalize(outNormal);
     vec3 lightDir = normalize(-lightDirection);
 
     // Composante diffuse
@@ -50,6 +50,7 @@ void main() {
         terrainColor = mix(rockColor, snowColor, t);
     }
 
-    vec3 result = (ambient + diffuse) * color_Mesh;
-    FragColor = terrainColor * vec4(result, 1.0);
+    vec4 finalColor = vec4(terrainColor.rgb * (ambient + diffuse), terrainColor.a);
+    FragColor = finalColor /** vec4(color_Mesh, 1.0)*/;
+
 }
