@@ -5,6 +5,7 @@
 BezierCurve::BezierCurve(unsigned int res, float sz) : resolution(res), size(sz)  {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
+    heightScale = 1.;
 
     shaderProgram = LoadShaders("bezier_vertex_shader.glsl", "bezier_fragment_shader.glsl");
 }
@@ -14,9 +15,28 @@ BezierCurve::~BezierCurve() {
     glDeleteBuffers(1, &VBO);
 }
 
+void BezierCurve::initControlPoints(const glm::vec3& start, const glm::vec3& end, unsigned int nbControlPoints) {
+    controlPoints.clear();
+    addControlPoint(start);
+
+    if (nbControlPoints > 0) {
+        glm::vec3 direction = (end - start) / static_cast<float>(nbControlPoints + 1);
+        for (unsigned int i = 1; i <= nbControlPoints; ++i) {
+            glm::vec3 point = start + static_cast<float>(i) * direction;
+            addControlPoint(point);
+        }
+    }
+
+    addControlPoint(end);
+
+    glGenBuffers(1, &controlPointsBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, controlPointsBuffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, controlPoints.size() * sizeof(glm::vec3), controlPoints.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, controlPointsBuffer);
+}
+
 void BezierCurve::addControlPoint(const glm::vec3& point) {
     controlPoints.push_back(point);
-    generateCurvePoints();
 }
 
 void BezierCurve::clearControlPoints() {
@@ -35,39 +55,15 @@ void BezierCurve::setSize(float sz) {
     size = sz;
 }
 
+void BezierCurve::setHeightScale(float new_heightScale){
+    heightScale = new_heightScale;
+}
 
-void BezierCurve::update(float new_size, unsigned int new_res){
+void BezierCurve::update(float new_size, unsigned int new_res, float new_heightScale){
     setResolution(new_size);
     setSize(new_res);
-    generateCurvePoints();
+    setHeightScale(new_heightScale);
 }
-
-void BezierCurve::generateCurvePoints() {
-    curvePoints.clear();
-
-    // Algorithme de De Casteljau
-    for (unsigned int i = 0; i <= static_cast<int>(size); ++i) {
-        float t = static_cast<float>(i) / size;
-
-        std::vector<glm::vec3> temp = controlPoints;
-        while (temp.size() > 1) {
-            std::vector<glm::vec3> next;
-            for (size_t j = 0; j < temp.size() - 1; ++j) {
-                glm::vec3 interpolated = (1.0f - t) * temp[j] + t * temp[j + 1];
-                next.push_back(interpolated);
-            }
-            temp = next;
-        }
-
-        if (!temp.empty()) {
-            curvePoints.push_back(temp[0] * static_cast<float>(resolution/10.));
-        }
-    }
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, curvePoints.size() * sizeof(glm::vec3), curvePoints.data(), GL_STATIC_DRAW);
-}
-
 
 void BezierCurve::draw(const glm::mat4& viewMatrix, const glm::mat4& projMatrix) {
     if (curvePoints.empty()) return;
@@ -84,6 +80,12 @@ void BezierCurve::draw(const glm::mat4& viewMatrix, const glm::mat4& projMatrix)
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    for (unsigned int i = 0; i <= static_cast<int>(size); ++i) {
+        float t = static_cast<float>(i) / size;
+        glUniform1f(glGetUniformLocation(shaderProgram, "t"), t);
+        glDrawArrays(GL_POINTS, 0, 1);
+    }
 
     glDrawArrays(GL_LINE_STRIP, 0, curvePoints.size());
 

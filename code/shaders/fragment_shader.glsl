@@ -1,12 +1,17 @@
 #version 330 core
 
+in vec3 FragPos;
 in vec2 outUV;           // Coordonnées outUV
-in vec3 FragPos;      // Position du fragment dans l'espace monde  
-
+in vec3 Normal;
 in float outHeight;      // Hauteur interpolée depuis le vertex shader
 
-out vec4 color;
+out vec4 FragColor;
 
+uniform vec3 lightDirection;
+uniform vec3 lightColor;
+
+uniform vec3 ambientColor;
+uniform vec3 color_Mesh;
 
 uniform sampler2D heightMap;
 uniform sampler2D grassTexture;  // Texture pour les herbes
@@ -20,6 +25,15 @@ uniform float rockLimit;
 
 void main() {
 
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(-lightDirection);
+
+    // Composante diffuse
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * lightColor;
+
+    // Composante ambiante
+    vec3 ambient = ambientColor * lightColor;
 
     vec4 grassColor = texture(grassTexture, outUV);
     vec4 rockColor = texture(rockTexture, outUV);
@@ -36,5 +50,6 @@ void main() {
         terrainColor = mix(rockColor, snowColor, t);
     }
 
-    color = terrainColor;
+    vec3 result = (ambient + diffuse) * color_Mesh;
+    FragColor = terrainColor * vec4(result, 1.0);
 }

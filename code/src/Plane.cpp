@@ -34,9 +34,8 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     grassLimit = 0.4f;
     rockLimit = 0.7f;
 
-    m_ColorID = glGetUniformLocation(m_shaderProgram, "color_Mesh");
-
     initLodFBO();
+    initLight();
 }
 
 Plane::~Plane() {
@@ -90,9 +89,13 @@ void Plane::draw() {
     //Transmettre les limites de mon truc
     glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
     glUniform1f(glGetUniformLocation(m_shaderProgram, "rockLimit"), rockLimit);
+    
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "color_Mesh"), color.r, color.g, color.b);
 
-    // Couleur du maillage
-    glUniform3f(m_ColorID, color.x, color.y, color.z);
+    // Les lights
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightDirection"), lightDirection.r, lightDirection.g, lightDirection.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightColor"), lightColor.r, lightColor.g, lightColor.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
 
     //glBindTexture(GL_TEXTURE_2D, m_textureID);
 
@@ -140,6 +143,7 @@ void Plane::update(){
     renderLod();
     showImGuiLOD();
     draw();
+    updateLightRotation();
 
     if(showNormals){
         drawNormals();
@@ -185,8 +189,6 @@ void Plane::createPlaneVAO() {
             indices.push_back(topRight);
         }
     }
-
-    //calculDesNormales();
 
     m_indexCount = indices.size();
 
@@ -352,9 +354,6 @@ void Plane::showImGuiInterface() {
         ImGui::SliderFloat("Grass Limit", &grassLimit, -1.0f, 1.0f);
         ImGui::SliderFloat("Rock Limit", &rockLimit, -1.0f, 1.0f);
 
-        ImGui::Checkbox("Mode d'affichage", &isWireframe);
-        ImGui::Checkbox("Afficher les normales", &showNormals);
-
         ImGui::Separator();
         ImGui::Text(" === Modes d'affichage ===");
         if(ImGui::Checkbox("Afficher les triangles", &displayWire)){
@@ -364,6 +363,10 @@ void Plane::showImGuiInterface() {
         if(ImGui::Checkbox("Afficher les points", &displayPoint)){
             displayWire = false;
         }
+        ImGui::Checkbox("Afficher les normales", &showNormals);
+
+        ImGui::Text(" === Lumière ===");
+        ImGui::SliderFloat("Angle rotation", &lightRotationAngle, -180.0f, 180.0f);
     }
     ImGui::End();
 }
@@ -391,12 +394,30 @@ void Plane::recreatePlane() {
     createPlaneVAO();
 }
 
+void Plane::initLight(){
+    lightDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+    lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    ambientColor = glm::vec3(0.2f, 0.2f, 0.2f);
+
+    lightRotationAngle = 0.0f;
+}
+
+void Plane::updateLightRotation(){
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(lightRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    lightDirection = glm::vec3(rotationMatrix * glm::vec4(glm::vec3(0.0f, -1.0f, -1.0f), 0.0f));
+}
+
 int Plane::getResolution() const{
     return resolution;
 }
 
 float Plane::getSize() const{
     return size;
+}
+
+float Plane::getHeightScale() const{
+    return heightScale;
 }
 
 void Plane::setHeightMap(GLuint heightMapID){

@@ -53,9 +53,6 @@ bool globalInit();
 GLFWwindow* initWindow();
 void initImgui();
 
-void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID);
-
-
 int main(void)
 {
     if (!globalInit())
@@ -65,10 +62,8 @@ int main(void)
 
     initImgui();
 
-
     GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-    GLuint LightPosID = glGetUniformLocation(programID, "LightPosition_worldspace");
-    GLuint LightColorID = glGetUniformLocation(programID, "LightColor_worldspace");
+    GLuint viewPosLoc = glGetUniformLocation(programID, "ViewPosition");
 
     // Création du programme de calcul
     Noise noise;
@@ -106,9 +101,7 @@ int main(void)
     Plane terrain(10.f, 10, &mainCamera);
 
     BezierCurve chemin(terrain.getResolution(), terrain.getSize());
-    chemin.addControlPoint(glm::vec3(-5.0f, 0.0f, -5.0f));
-    chemin.addControlPoint(glm::vec3(0.0f, 2.0f, 0.0f));
-    chemin.addControlPoint(glm::vec3(5.0f, 0.0f, 5.0f));
+    chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
 
     glDisable(GL_CULL_FACE);
 
@@ -160,8 +153,10 @@ int main(void)
 
         mainCamera.update(deltaTime, window);
 
+        glm::vec3 cameraPos = mainCamera.getPosition();
+
         //View
-        updateLightPosition(LightPosID, LightColorID);
+        glUniform3fv(viewPosLoc, 1, &cameraPos[0]);
 
         glm::mat4 viewMatrix = mainCamera.getViewMatrix();
         glm::mat4 projMatrix = mainCamera.getProjectionMatrix();
@@ -169,13 +164,14 @@ int main(void)
         skybox.draw(viewMatrix, projMatrix);
 
         terrain.update();
-
         
         noise.setResolution(terrain.getResolution());
         terrain.setHeightMap(noise.getTextureNoise());
         
-        chemin.update(terrain.getSize(), terrain.getResolution());
+        chemin.update(terrain.getSize(), terrain.getResolution(), terrain.getHeightScale());
+        
         chemin.draw(viewMatrix, projMatrix);
+
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -262,13 +258,4 @@ void initImgui()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-}
-
-void updateLightPosition(GLuint _lightPosID, GLuint _lightColorID)
-{
-    const glm::vec3 lightPos = glm::vec3(0.f, 40.f, 0.f);
-    glUniform3f(_lightPosID, lightPos.x, lightPos.y, lightPos.z);
-
-    const glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);
-    glUniform3f(_lightColorID, lightColor.x, lightColor.y, lightColor.z);
 }

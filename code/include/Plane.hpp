@@ -18,6 +18,7 @@ public:
 
     int getResolution() const;
     float getSize() const;
+    float getHeightScale() const;
 
     void setHeightMap(GLuint heightMapID);
 
@@ -28,6 +29,8 @@ private:
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void recreatePlane();
+    void initLight();
+    void updateLightRotation();
 
     void initLodFBO();
     void renderLod();
@@ -52,7 +55,7 @@ private:
 
     GLuint VAO, VBO, EBO, UVBO, NBO, lodFBO, lodTexture, IDBO;
 
-    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_ColorID, m_lodShaderProgram;
+    GLuint m_shaderProgram, m_normalShaderProgram, m_textureID, m_heightMapID, m_lodShaderProgram;
 
     GLuint m_grassTextureID;
     GLuint m_rockTextureID;
@@ -61,6 +64,11 @@ private:
     float grassLimit;
     float rockLimit;
 
+    /*==Variables de la lumière==*/
+    glm::vec3 lightDirection;
+    glm::vec3 lightColor;
+    glm::vec3 ambientColor;
+    float lightRotationAngle;
 
     unsigned int m_indexCount;
 };
