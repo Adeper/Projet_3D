@@ -19,7 +19,7 @@ void main() {
     float height_ = texture(heightMap, vertexUV).r;
 
     vec3 position = vertexPosition;
-    position.y = height * heightScale;
+    position.y = height_ * heightScale;
 
     vec4 worldPosition = model * vec4(position, 1.0);
     FragPos = vec3(worldPosition);

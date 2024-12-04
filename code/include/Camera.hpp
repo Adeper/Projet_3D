@@ -22,13 +22,11 @@ public:
 	void mouseRotation(float _deltaTime, GLFWwindow* window);
 	void keybordRotation(float _deltaTime, GLFWwindow* window);
 
-	glm::vec3 getPosition() const;
-	glm::vec3 getFront() const;
-
 	glm::quat getRotation() const {return m_rotation;}
 	glm::mat4 getViewMatrix() const {return m_viewMatrix;}
 	glm::mat4 getProjectionMatrix() const {return m_projectionMatrix;}
 	glm::vec3 getPosition() const {return m_position;}
+	glm::vec3 getFront() const {return m_front;}
 
 private:
 
