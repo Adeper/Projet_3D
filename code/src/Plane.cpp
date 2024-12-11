@@ -42,6 +42,8 @@ Plane::~Plane() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &UVBO);
+    glDeleteBuffers(1, &NBO);
     glDeleteTextures(1, &m_textureID);
 }
 
@@ -65,17 +67,17 @@ void Plane::draw() {
 
     // Lier les textures pour herbe, rocher et neige
     // MARCHE PAS
-    glActiveTexture(GL_TEXTURE1);
+    /*glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
-    glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), m_grassTextureID);
 
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, m_rockTextureID);
-    glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), 2);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), m_rockTextureID);
 
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, m_snowTextureID);
-    glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), m_snowTextureID);*/
 
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
 
@@ -422,4 +424,36 @@ float Plane::getHeightScale() const{
 
 void Plane::setHeightMap(GLuint heightMapID){
     m_heightMapID = heightMapID;
+    setHeight();
+}
+
+void Plane::setHeight() {
+    if (m_heightMapID == 0) {
+        std::cerr << "Height map ID invalide!" << std::endl;
+        return;
+    }
+
+    // Synchronisation GPU-CPU
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    m_heightData.resize(resolution * resolution);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, m_heightData.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    /*GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cerr << "Erreur OpenGL: " << error << std::endl;
+    }
+
+    for (int i = 0; i < std::min(10, static_cast<int>(m_heightData.size())); ++i) {
+        std::cout << "Valeur de hauteur [" << i << "]: " << m_heightData[i] << std::endl;
+    }*/
+}
+
+const std::vector<float>& Plane::getHeightData() const {
+    return m_heightData;
 }

@@ -100,7 +100,7 @@ int main(void)
 
     Plane terrain(10.f, 10, &mainCamera);
 
-    BezierCurve chemin(terrain.getResolution(), terrain.getSize());
+    BezierCurve chemin(terrain.getResolution(), &mainCamera);
     chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
 
     glDisable(GL_CULL_FACE);
@@ -168,10 +168,9 @@ int main(void)
         noise.setResolution(terrain.getResolution());
         terrain.setHeightMap(noise.getTextureNoise());
         
-        chemin.update(terrain.getSize(), terrain.getResolution(), terrain.getHeightScale());
-        
-        chemin.draw(viewMatrix, projMatrix);
-
+        chemin.setResolution(terrain.getResolution());
+        chemin.setHeightData(terrain.getHeightData());
+        chemin.update();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -21,6 +21,7 @@ public:
     float getHeightScale() const;
 
     void setHeightMap(GLuint heightMapID);
+    const std::vector<float>& getHeightData() const;
 
 private:
     void createPlaneVAO();
@@ -31,6 +32,7 @@ private:
     void recreatePlane();
     void initLight();
     void updateLightRotation();
+    void setHeight();
 
     void initLodFBO();
     void renderLod();
@@ -42,6 +44,7 @@ private:
     int resolution;
     float heightScale;
     float maxLodDistance;
+    std::vector<float> m_heightData;
 
     std::vector<float> vertices;
     std::vector<unsigned int> indices;

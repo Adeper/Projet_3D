@@ -51,6 +51,7 @@ void main() {
     }
 
     vec4 finalColor = vec4(terrainColor.rgb * (ambient + diffuse), terrainColor.a);
-    FragColor = finalColor /** vec4(color_Mesh, 1.0)*/;
+    //FragColor = finalColor /** vec4(color_Mesh, 1.0)*/;
 
+    FragColor = vec4(color_Mesh * (ambient + diffuse), 1.0);
 }
