@@ -217,7 +217,6 @@ void Camera::updateFontRightUp(){
 
 void Camera::update(float _deltaTime, GLFWwindow* _window)
 {
-	updateInterface(_deltaTime);
 	updateFreeInput(_deltaTime, _window);
 
 	if (isRotating) {

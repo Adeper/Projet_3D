@@ -139,7 +139,6 @@ void Plane::drawNormals(){
 
 
 void Plane::update(){
-    showImGuiInterface();
     //renderLod();
     //showImGuiLOD();
     draw();
@@ -267,36 +266,6 @@ void Plane::renderLod() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// GLuint Plane::loadTexture(const std::string& texturePath) {
-//     GLuint textureID;
-//     glGenTextures(1, &textureID);
-
-//     int width, height, nrChannels;
-//     unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, STBI_rgb);
-
-//     if (data) {
-//         GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
-//         glBindTexture(GL_TEXTURE_2D, textureID);
-//         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-//         glGenerateMipmap(GL_TEXTURE_2D);
-
-//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-
-//         std::cout << "Texture loaded: " << texturePath
-//               << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
-//     } else {
-//         std::cerr << "Failed to load texture: " << texturePath << std::endl;
-//         return 0;
-//     }
-
-//     stbi_image_free(data);
-//     return textureID;
-// }
-
 GLuint Plane::loadTexture(const std::string &path)
 {
     GLuint texture;
@@ -349,7 +318,7 @@ void Plane::showImGuiInterface() {
         }
         ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
         if (ImGui::SliderFloat("LOD Distance", &maxLodDistance, 10.0f, 500.0f)) {
-            renderLod();
+            //renderLod();
         }
         ImGui::SliderFloat("Grass Limit", &grassLimit, -1.0f, 1.0f);
         ImGui::SliderFloat("Rock Limit", &rockLimit, -1.0f, 1.0f);

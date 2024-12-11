@@ -96,8 +96,6 @@ target_link_libraries(ProceduralGeneration
     ${ALL_LIBS}
 )
 
-target_link_libraries(ProceduralGeneration stdc++fs)
-
 # Configuration des dossiers de travail pour Xcode et Visual Studio
 set_target_properties(ProceduralGeneration PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/")
 set_target_properties(ProceduralGeneration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/")

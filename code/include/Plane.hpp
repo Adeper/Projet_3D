@@ -21,11 +21,11 @@ public:
     float getHeightScale() const;
 
     void setHeightMap(GLuint heightMapID);
+    void showImGuiInterface();
 
 private:
     void createPlaneVAO();
     GLuint loadTexture(const std::string &path);
-    void showImGuiInterface();
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void recreatePlane();

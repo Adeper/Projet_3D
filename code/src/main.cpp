@@ -30,8 +30,8 @@ GLFWwindow* window;
 #include <BezierCurve.hpp>
 
 // Paramètres de la caméra
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+unsigned int SCR_WIDTH = 800;
+unsigned int SCR_HEIGHT = 600;
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -41,6 +41,19 @@ double lastTime = glfwGetTime(); // Temps écoulé depuis le début
 int nbFrames = 0;               // Compteur de frames
 int fps = 0;                    // FPS calculés pour affichage
 
+// Bool pour afficher les fenêtres ImGui
+bool show_tuto_window = true;
+bool show_noise_window = false;
+bool show_noise_visible_window = false;
+bool show_camera_window = false;
+bool show_plane_window = false;
+
+// Touches release/pressed:
+bool isNpressed = false;
+bool isVpressed = false;
+bool isCpressed = false;
+bool isPpressed = false;
+bool isTpressed = false;
 
 GLuint computeNoiseProgram, vertexNoiseProgram, fragmentNoiseProgram;
 GLuint noiseTexture; 
@@ -52,6 +65,8 @@ int height = 512;
 bool globalInit();
 GLFWwindow* initWindow();
 void initImgui();
+void tutoImgui();
+void processInput();
 
 int main(void)
 {
@@ -106,6 +121,7 @@ int main(void)
     glDisable(GL_CULL_FACE);
 
     do {
+
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -148,8 +164,22 @@ int main(void)
         ImGui::End();
         ImGui::PopStyleVar(2); // Revenir aux styles par défaut
 
-        noise.parametersInterface(); // Interface ImGui pour les paramètres du bruit
-        noise.noiseInterface(); // Affiche la texture dans l'interface ImGui
+        if (show_tuto_window)
+            tutoImgui(); // Affiche la fenêtre d'explication
+
+        if (show_noise_window)
+            noise.parametersInterface(); // Interface ImGui pour les paramètres du bruit
+        
+        noise.setUpParameters(); // Met à jour les paramètres du bruit
+
+        if (show_noise_visible_window)
+            noise.noiseInterface(); // Affiche la texture dans l'interface ImGui
+    
+        if (show_plane_window)
+            terrain.showImGuiInterface(); // Interface ImGui pour les paramètres du plan
+
+        if (show_camera_window)
+            mainCamera.updateInterface(deltaTime); // Interface ImGui pour les paramètres de la caméra
 
         mainCamera.update(deltaTime, window);
 
@@ -172,6 +202,7 @@ int main(void)
         
         chemin.draw(viewMatrix, projMatrix);
 
+        processInput();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -227,6 +258,8 @@ bool globalInit()
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+    SCR_WIDTH = width;
+    SCR_HEIGHT = height;
 }
 
 GLFWwindow* initWindow()
@@ -258,4 +291,94 @@ void initImgui()
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
+}
+
+void processInput(){
+    
+    // Si on appuie sur la touche N on ouvre les paramètres du bruit
+    if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS && !isNpressed) {
+        show_noise_window = !show_noise_window;
+        isNpressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_N) == GLFW_RELEASE) {
+        isNpressed = false;
+    }
+
+    // Si on appuie sur la touche V on ouvre l'aperçu du bruit
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && !isVpressed) {
+        show_noise_visible_window = !show_noise_visible_window;
+        isVpressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) {
+        isVpressed = false;
+    }
+
+    // Si on appuie sur la touche P on ouvre les paramètres du plan
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !isPpressed) {
+        show_plane_window = !show_plane_window;
+        isPpressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) {
+        isPpressed = false;
+    }
+
+    // Si on appuie sur la touche C on ouvre les paramètres de la caméra
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !isCpressed) {
+        show_camera_window = !show_camera_window;
+        isCpressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
+        isCpressed = false;
+    }
+
+    // Si on appuie sur la touche T on ouvre le guide d'utilisation
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && !isTpressed) {
+        show_tuto_window = !show_tuto_window;
+        isTpressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) {
+        isTpressed = false;
+    }
+}
+
+// Fenêtre imgui pour expliquer notre projet
+void tutoImgui() {
+
+    ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Always); // Taille fixe
+    ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH / 2, SCR_HEIGHT / 2), ImGuiCond_Always); // Centrée
+
+    ImGui::Begin("Guide d'utilisation");
+
+    ImGui::TextWrapped("Bienvenue dans le projet de génération procédurale de terrain et de routes ! Voici un guide rapide pour naviguer dans les fonctionnalités :");
+
+    ImGui::Separator();
+
+    ImGui::TextWrapped("1. Fenêtre des paramètres pour le bruit (Touche N) :");
+    ImGui::BulletText("Modifiez les paramètres de bruit comme le type de bruit, le gain, les octaves, etc.");
+    ImGui::BulletText("Permet de visualiser et ajuster la génération procédurale du terrain.");
+
+    ImGui::TextWrapped("2. Fenêtre d'aperçu du bruit (Touche V) :");
+    ImGui::BulletText("Affiche un aperçu visuel de la heightmap générée par le bruit.");
+    ImGui::BulletText("Permet de vérifier les résultats en temps réel.");
+
+    ImGui::TextWrapped("3. Fenêtre des paramètres pour le plan (Touche P) :");
+    ImGui::BulletText("Réglez la taille, la résolution, et d'autres propriétés du plan.");
+    ImGui::BulletText("Permet aussi de modifier les limites de textures (herbe, roche, etc.).");
+
+    ImGui::TextWrapped("4. Fenêtre des paramètres de la caméra (Touche C) :");
+    ImGui::BulletText("Ajustez la position, l'angle et les paramètres de la caméra.");
+    ImGui::BulletText("Permet également d'inverser les axes ou changer de mode de caméra.");
+
+    ImGui::Separator();
+    ImGui::TextWrapped("Contrôles généraux :");
+    ImGui::BulletText("Appuyez sur T pour rouvrir ce guide.");
+    ImGui::BulletText("Échappe pour quitter l'application.");
+
+    ImGui::Separator();
+
+    if (ImGui::Button("OK")) {
+        show_tuto_window = false;
+    }
+
+    ImGui::End();
 }
