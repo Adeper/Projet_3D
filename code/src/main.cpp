@@ -26,8 +26,10 @@ GLFWwindow* window;
 #include <Camera.hpp>
 #include <Skybox.hpp>
 #include <Plane.hpp>
+#include <PlaneLOD.hpp>
 #include <Noise.hpp>
 #include <BezierCurve.hpp>
+#include <Globals.hpp>
 
 // Paramètres de la caméra
 unsigned int SCR_WIDTH = 800;
@@ -77,7 +79,7 @@ int main(void)
 
     initImgui();
 
-    GLuint programID = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+    GLuint programID = LoadShaders("../shaders/vertex_shader.glsl", "../shaders/fragment_shader.glsl");
     GLuint viewPosLoc = glGetUniformLocation(programID, "ViewPosition");
 
     // Création du programme de calcul
@@ -113,7 +115,7 @@ int main(void)
     };
     Skybox skybox(faces);
 
-    Plane terrain(10.f, 10, &mainCamera);
+    PlaneLOD terrain(10.f, 10, &mainCamera);
 
     BezierCurve chemin(terrain.getResolution(), terrain.getSize());
     chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
@@ -176,6 +178,7 @@ int main(void)
             noise.noiseInterface(); // Affiche la texture dans l'interface ImGui
     
         if (show_plane_window)
+            // terrain.showImGuiInterfaceLOD(); // Interface ImGui pour les paramètres du plan
             terrain.showImGuiInterface(); // Interface ImGui pour les paramètres du plan
 
         if (show_camera_window)
@@ -265,8 +268,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 GLFWwindow* initWindow()
 {
     glfwWindowHint(GLFW_SAMPLES, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -290,7 +293,7 @@ void initImgui()
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplOpenGL3_Init("#version 450");
 }
 
 void processInput(){

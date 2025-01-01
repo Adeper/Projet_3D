@@ -53,6 +53,8 @@ class Noise {
         bool hasChanged; // Pour savoir si les paramètres ont changé
         bool hasChangedRes; // Pour savoir si la résolution a changé
 
+        void reloadShaders(); // Recharge les shaders
+
     public:
 
         bool useComputeShader; // Pour savoir si on utilise le compute shader ou vertex/fragment shader

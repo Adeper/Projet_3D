@@ -1,4 +1,7 @@
 #pragma once
+#ifndef CAMERA_HPP
+#define CAMERA_HPP
+
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -26,7 +29,11 @@ public:
 	glm::mat4 getViewMatrix() const {return m_viewMatrix;}
 	glm::mat4 getProjectionMatrix() const {return m_projectionMatrix;}
 	glm::vec3 getPosition() const {return m_position;}
-	glm::vec3 getFront() const {return m_front;}
+	glm::vec3 getFront() const {return m_front;} 
+	glm::vec3 getRight() const {return m_right;}
+	glm::vec3 getUp() const {return m_up;}
+	float getFar() const {return m_far;}
+	float getNear() const {return m_near;}
 
 private:
 
@@ -43,6 +50,9 @@ private:
 	glm::vec3	m_right_horizontal = VEC_RIGHT;
 	glm::quat	m_rotation{};
 	float		m_far = 200.0f;
+	float       m_near = 3.0f; 
+	// float       m_aspectRatio{ 16.0f / 9.0f };    
+	// bool        m_isPerspective{ true };                    
 
 	int		m_mode_axe_Horizontal{ 1 };
 	int		m_mode_axe_Vertical{ 1 };
@@ -60,3 +70,5 @@ private:
 	glm::mat4 m_viewMatrix;
 	glm::mat4 m_projectionMatrix;
 };
+
+#endif // !CAMERA_HPP

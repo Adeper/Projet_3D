@@ -73,6 +73,14 @@ set(SHADERS
     shaders/lod_geometry_shader.glsl
 )
 
+# Fichers tesselation shaders
+set(TESS_SHADERS
+    tesselation_shaders/lod_tess_control_shader.glsl
+    tesselation_shaders/lod_tess_evaluation_shader.glsl
+    tesselation_shaders/tess_control_shader.glsl
+    tesselation_shaders/tess_eval_shader.glsl
+)
+
 # Fichiers ImGui
 file(GLOB IMGUI_SRC imgui/*.cpp)
 file(GLOB IMGUI_HDR imgui/*.h)
@@ -89,6 +97,7 @@ add_executable(ProceduralGeneration
     ${IMGUI_SRC}
     ${IMGUI_HDR}
     ${SHADERS}
+    ${TESS_SHADERS}
 )
 
 # Lier les bibliothèques
@@ -101,14 +110,23 @@ set_target_properties(ProceduralGeneration PROPERTIES XCODE_ATTRIBUTE_CONFIGURAT
 set_target_properties(ProceduralGeneration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/")
 
 # Copier les shaders dans le dossier de sortie après compilation
-foreach(SHADER ${SHADERS})
-    add_custom_command(
-        TARGET ProceduralGeneration POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}
-        ${CMAKE_CURRENT_SOURCE_DIR}/bin/
-    )
-endforeach()
+# foreach(SHADER ${SHADERS})
+#     add_custom_command(
+#         TARGET ProceduralGeneration POST_BUILD
+#         COMMAND ${CMAKE_COMMAND} -E copy
+#         ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}
+#         ${CMAKE_CURRENT_SOURCE_DIR}/bin/
+#     )
+# endforeach()
+
+# foreach(TESS_SHADERS ${TESS_SHADERS})
+#     add_custom_command(
+#         TARGET ProceduralGeneration POST_BUILD
+#         COMMAND ${CMAKE_COMMAND} -E copy
+#         ${CMAKE_CURRENT_SOURCE_DIR}/${TESS_SHADERS}
+#         ${CMAKE_CURRENT_SOURCE_DIR}/bin/
+#     )
+# endforeach()
 
 # Message en cas de succès
 message(STATUS "CMake setup complete. Ready to build ProceduralGeneration!")

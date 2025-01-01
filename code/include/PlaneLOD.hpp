@@ -1,5 +1,5 @@
-#ifndef PLANE_HPP
-#define PLANE_HPP
+#ifndef PLANELOD_HPP
+#define PLANELOD_HPP
 
 #include <GL/glew.h>
 #include <glm/glm.hpp>
@@ -8,13 +8,12 @@
 #include <vector>
 #include <array>
 
-class Plane {
+class PlaneLOD {
 public:
-    Plane(float size = 1.0f, unsigned int resolution = 10, Camera* cam = nullptr);
-    ~Plane();
+    PlaneLOD(float size = 1.0f, unsigned int resolution = 10, Camera* cam = nullptr);
+    ~PlaneLOD();
 
     void draw();
-    void drawLOD();
     void drawNormals();
     void update();
 
@@ -33,19 +32,19 @@ public:
     void setHeightMap(GLuint heightMapID);
     GLuint getHeightMap() const;
     void showImGuiInterface();
-    void showImGuiInterfaceLOD();
 
     void recreatePlane();
-    void recreatePlaneLOD();
+
+    void debugImgui();
 
 private:
     void createPlaneVAO();
-    void createPlaneLOD(int lodLevel);
     GLuint loadTexture(const std::string &path);
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void initLight();
     void updateLightRotation();
+    void reloadShaders();
     
 
     Camera* camera_plan; 
@@ -87,8 +86,6 @@ private:
     unsigned int m_indexCount;
 
     // LOD
-    // Ajout des buffers pour les trois niveaux de LOD
-    GLuint VAOs[3], VBOs[3], EBOs[3];
     float blendFactors[3] = {1.0f, 0.0f, 0.0f}; // Facteurs de mélange pour chaque niveau de LOD
 
 };

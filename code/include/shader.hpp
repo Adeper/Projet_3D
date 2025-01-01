@@ -2,6 +2,9 @@
 #define SHADER_HPP
 
 GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path, const char* geometry_file_path = nullptr);
+GLuint LoadShadersV2(const char* vertex_file_path, const char* fragment_file_path, 
+                   const char* tess_control_file_path, const char* tess_evaluation_file_path,
+                   const char* geometry_file_path = nullptr);
 GLuint loadComputeShader(const char* compute_file_path);
 GLuint loadFragmentShader(const char* shaderPath);
 GLuint loadVertexShader(const char* shaderPath);

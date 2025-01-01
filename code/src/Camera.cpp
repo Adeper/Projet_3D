@@ -37,6 +37,7 @@ void Camera::updateInterface(float _deltaTime)
 	// ImGUI window creation
 	if (ImGui::Begin("Info camera"))
 	{
+		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always); // Coin supérieur gauche
 		ImGui::Separator();
 		ImGui::Text("Position camera (%f %f %f)", m_position.x, m_position.y, m_position.z);
 		ImGui::SliderFloat("x", &m_position.x, -50.0f, 50.0f);

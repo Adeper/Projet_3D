@@ -52,7 +52,7 @@ Skybox::Skybox(const std::vector<std::string>& faces) {
     m_cubemapTexture = loadCubemap(faces);
     m_skyboxVAO = createSkyboxVAO();
 
-    m_shaderProgram = LoadShaders("skybox_vertex.glsl", "skybox_fragment.glsl");
+    m_shaderProgram = LoadShaders("../shaders/skybox_vertex.glsl", "../shaders/skybox_fragment.glsl");
 }
 
 Skybox::~Skybox() {

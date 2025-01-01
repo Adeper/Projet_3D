@@ -7,7 +7,7 @@ BezierCurve::BezierCurve(unsigned int res, float sz) : resolution(res), size(sz)
     glGenBuffers(1, &VBO);
     heightScale = 1.;
 
-    shaderProgram = LoadShaders("bezier_vertex_shader.glsl", "bezier_fragment_shader.glsl");
+    shaderProgram = LoadShaders("../shaders/bezier_vertex_shader.glsl", "../shaders/bezier_fragment_shader.glsl");
 }
 
 BezierCurve::~BezierCurve() {

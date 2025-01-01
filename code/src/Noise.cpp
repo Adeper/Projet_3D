@@ -11,6 +11,8 @@
 // Inclue tinyfiledialogs
 #include <tinyfiledialogs.h>
 
+#include <Globals.hpp>
+
 // Constructeur
 void Noise::init(){
     
@@ -94,10 +96,10 @@ GLuint Noise::getTextureNoise() const{
 
 void Noise::setProgramID(){
     if (useComputeShader){
-        programID = loadComputeShader("noise_compute.glsl");
+        programID = loadComputeShader("../shaders/noise_compute.glsl");
     }
     else {
-        programID = LoadShaders("noise_vertex.glsl", "noise_fragment.glsl");
+        programID = LoadShaders("../shaders/noise_vertex.glsl", "../shaders/noise_fragment.glsl");
     }
 }
 
@@ -182,6 +184,7 @@ void Noise::parametersInterface(){
 
     ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin("Paramètres du bruit");
+    ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH - 600, SCR_HEIGHT - 400), ImGuiCond_Always);
 
     const char* noiseTypes[] = { "Perlin basique", "Perlin 2D", "Perlin 3D", "Perlin 4D" };
 
@@ -191,6 +194,10 @@ void Noise::parametersInterface(){
     ImGui::SliderInt("Octaves", &octaves, 1, 10);
     ImGui::SliderFloat("Persistance", &persistence, 0.3f, 2.0f);
     ImGui::SliderFloat("Puissance", &power, 1.0f, 10.0f);
+
+    if (ImGui::Button("Reload Shaders")) {
+        reloadShaders();
+    }
 
     ImGui::End();
 }
@@ -270,6 +277,18 @@ void Noise::noiseInterface(){
     ImGui::Image((void*)(intptr_t)noiseTexture, ImVec2(450, 450));
 
     ImGui::End();
+}
+
+void Noise::reloadShaders() {
+    glDeleteProgram(programID);
+
+    if (useComputeShader){
+        programID = loadComputeShader("../shaders/noise_compute.glsl");
+    }
+    else {
+        programID = LoadShaders("../shaders/noise_vertex.glsl", "../shaders/noise_fragment.glsl");
+    }
+    std::cout << "Shaders reloaded successfully!" << std::endl;
 }
 
 void Noise::destroy(){

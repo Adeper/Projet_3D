@@ -13,6 +13,120 @@ using namespace std;
 #include <GL/glew.h>
 
 #include <shader.hpp>
+GLuint LoadShadersV2(const char* vertex_file_path, const char* fragment_file_path, 
+                   const char* tess_control_file_path, const char* tess_evaluation_file_path,
+                   const char* geometry_file_path) {
+    // Créez les shaders
+    GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+    GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+    GLuint TessControlShaderID = 0;
+    GLuint TessEvaluationShaderID = 0;
+    GLuint GeometryShaderID = 0;
+
+    // Fonction pour lire et compiler un shader
+    auto compileShader = [](const char* filePath, GLuint shaderID) {
+        std::string ShaderCode;
+        std::ifstream ShaderStream(filePath, std::ios::in);
+
+        if (ShaderStream.is_open()) {
+            std::stringstream sstr;
+            sstr << ShaderStream.rdbuf();
+            ShaderCode = sstr.str();
+            ShaderStream.close();
+        } else {
+            std::cerr << "Impossible d'ouvrir le fichier " << filePath << std::endl;
+            return false;
+        }
+
+        const char* ShaderCodePtr = ShaderCode.c_str();
+        glShaderSource(shaderID, 1, &ShaderCodePtr, nullptr);
+        glCompileShader(shaderID);
+
+        // Vérification des erreurs de compilation
+        GLint Result = GL_FALSE;
+        int InfoLogLength;
+        glGetShaderiv(shaderID, GL_COMPILE_STATUS, &Result);
+        glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+        if (InfoLogLength > 0) {
+            std::vector<char> ShaderErrorMessage(InfoLogLength + 1);
+            glGetShaderInfoLog(shaderID, InfoLogLength, nullptr, &ShaderErrorMessage[0]);
+            std::cerr << &ShaderErrorMessage[0] << std::endl;
+        }
+        return Result == GL_TRUE;
+    };
+
+    // Compilez les shaders
+    if (!compileShader(vertex_file_path, VertexShaderID)) return 0;
+    if (!compileShader(fragment_file_path, FragmentShaderID)) return 0;
+
+    // Si un fichier de Tessellation Control Shader est fourni, le compiler
+    if (tess_control_file_path) {
+        TessControlShaderID = glCreateShader(GL_TESS_CONTROL_SHADER);
+        if (!compileShader(tess_control_file_path, TessControlShaderID)) return 0;
+    }
+
+    // Si un fichier de Tessellation Evaluation Shader est fourni, le compiler
+    if (tess_evaluation_file_path) {
+        TessEvaluationShaderID = glCreateShader(GL_TESS_EVALUATION_SHADER);
+        if (!compileShader(tess_evaluation_file_path, TessEvaluationShaderID)) return 0;
+    }
+
+    // Si un fichier de shader géométrique est fourni, le compiler
+    if (geometry_file_path) {
+        GeometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
+        if (!compileShader(geometry_file_path, GeometryShaderID)) return 0;
+    }
+
+    // Liez le programme
+    GLuint ProgramID = glCreateProgram();
+    glAttachShader(ProgramID, VertexShaderID);
+    glAttachShader(ProgramID, FragmentShaderID);
+    if (tess_control_file_path) {
+        glAttachShader(ProgramID, TessControlShaderID);
+    }
+    if (tess_evaluation_file_path) {
+        glAttachShader(ProgramID, TessEvaluationShaderID);
+    }
+    if (geometry_file_path) {
+        glAttachShader(ProgramID, GeometryShaderID);
+    }
+    glLinkProgram(ProgramID);
+
+    // Vérifiez les erreurs de linkage
+    GLint Result = GL_FALSE;
+    int InfoLogLength;
+    glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
+    glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if (InfoLogLength > 0) {
+        std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
+        glGetProgramInfoLog(ProgramID, InfoLogLength, nullptr, &ProgramErrorMessage[0]);
+        std::cerr << &ProgramErrorMessage[0] << std::endl;
+    }
+
+    // Nettoyez les shaders
+    glDetachShader(ProgramID, VertexShaderID);
+    glDetachShader(ProgramID, FragmentShaderID);
+    glDeleteShader(VertexShaderID);
+    glDeleteShader(FragmentShaderID);
+
+    if (tess_control_file_path) {
+        glDetachShader(ProgramID, TessControlShaderID);
+        glDeleteShader(TessControlShaderID);
+    }
+
+    if (tess_evaluation_file_path) {
+        glDetachShader(ProgramID, TessEvaluationShaderID);
+        glDeleteShader(TessEvaluationShaderID);
+    }
+
+    if (geometry_file_path) {
+        glDetachShader(ProgramID, GeometryShaderID);
+        glDeleteShader(GeometryShaderID);
+    }
+
+    return ProgramID;
+}
+
 GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path, const char* geometry_file_path) {
     // Créez les shaders
     GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);

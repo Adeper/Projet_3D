@@ -19,13 +19,20 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     showNormals = false;
     heightScale = 10.0f;
     maxLodDistance = 100.0f;
+    morphFactor = 0.2f; 
+    morphDistance = maxLodDistance * morphFactor;
+
     color = glm::vec3(1.f, 1.f, 1.f);
 
     createPlaneVAO();
+    
+    // Création des trois niveaux de LOD
+    // for (int i = 0; i < 3; i++) {
+    //     createPlaneLOD(i);
+    // }
 
-    m_shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl", "lod_geometry_shader.glsl");
+    m_shaderProgram = LoadShadersV2("vertex_shader.glsl", "fragment_shader.glsl", "tess_control_shader.glsl", "tess_eval_shader.glsl", nullptr);
     m_normalShaderProgram = LoadShaders("normal_vertex_shader.glsl", "normal_fragment_shader.glsl", "normal_geometry_shader.glsl");
-    m_lodShaderProgram = LoadShaders("lod_vertex_shader.glsl", "lod_fragment_shader.glsl");
 
     m_grassTextureID = loadTexture("../textures/grass.png");
     m_rockTextureID = loadTexture("../textures/rock.png");
@@ -34,8 +41,8 @@ Plane::Plane(float new_size, unsigned int new_resolution, Camera* cam) {
     grassLimit = 0.4f;
     rockLimit = 0.7f;
 
-    initLodFBO();
     initLight();
+
 }
 
 Plane::~Plane() {
@@ -43,11 +50,21 @@ Plane::~Plane() {
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
     glDeleteTextures(1, &m_textureID);
+
+    // LOD
+    // PLUS BESOIN
+    for (int i = 0; i < 3; i++) {
+        glDeleteVertexArrays(1, &VAOs[i]);
+        glDeleteBuffers(1, &VBOs[i]);
+        glDeleteBuffers(1, &EBOs[i]);
+    }
 }
 
 void Plane::draw() {
 
     glUseProgram(m_shaderProgram);
+
+    glPatchParameteri(GL_PATCH_VERTICES, 3); // Chaque patch contient 3 sommets
 
     // Matrices de transformation
     glm::mat4 modelMatrix = glm::mat4(1.0f);
@@ -64,7 +81,6 @@ void Plane::draw() {
     glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
 
     // Lier les textures pour herbe, rocher et neige
-    // MARCHE PAS
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
     glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
@@ -85,6 +101,15 @@ void Plane::draw() {
 
     // Transmettre la distance maximale du LOD
     glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
+
+    // Transmettre la distance de morphing
+    morphDistance = maxLodDistance * morphFactor;
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "morphDistance"), morphDistance);
+
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "neighborTexture"), 4);
+
+    // Transmettre la resolution du terrain
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "resolution"), resolution);
 
     //Transmettre les limites de mon truc
     glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
@@ -108,11 +133,106 @@ void Plane::draw() {
 
     // Dessiner les triangles
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+    //glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_PATCHES, m_indexCount, GL_UNSIGNED_INT, 0); // Mode GL_PATCHES
     glBindVertexArray(0);
 
     // Réinitialiser le mode de polygone
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+// PLUS BESOIN
+void Plane::drawLOD(){
+    glUseProgram(m_shaderProgram);
+    
+    glPatchParameteri(GL_PATCH_VERTICES, 3); // Chaque patch contient 3 sommets
+
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    const glm::mat4& viewMatrix = camera_plan->getViewMatrix();
+    const glm::mat4& projectionMatrix = camera_plan->getProjectionMatrix();
+
+    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
+
+    // Calcul de la distance caméra
+    glm::vec3 cameraPos = camera_plan->getPosition();
+    glm::vec3 planeCenter(0.0f, 0.0f, 0.0f);
+    float distance = glm::distance(cameraPos, planeCenter);
+
+    // Hauteur et texture du heightMap
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
+
+    // Lier les textures pour herbe, rocher et neige
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, m_rockTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), 2);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, m_snowTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
+
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
+
+    // Transmettre la position de la caméra
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "cameraPosition"), cameraPos.x, cameraPos.y, cameraPos.z);
+
+    // Transmettre la distance maximale du LOD
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
+
+    // Transmettre la resolution du terrain
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "resolution"), resolution);
+
+    // Transmettre la distance de morphing
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "morphDistance"), morphDistance);
+
+    //Transmettre les limites de mon truc
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "rockLimit"), rockLimit);
+
+    // Les lights
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightDirection"), lightDirection.r, lightDirection.g, lightDirection.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightColor"), lightColor.r, lightColor.g, lightColor.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
+
+    // Mise à jour des facteurs de mélange
+    blendFactors[0] = glm::clamp(1.0f - distance / (maxLodDistance / 3.0f), 0.0f, 1.0f);
+    blendFactors[1] = glm::clamp(1.0f - glm::abs(distance - maxLodDistance / 3.0f) / (maxLodDistance / 3.0f), 0.0f, 1.0f);
+    blendFactors[2] = glm::clamp((distance - 2.0f * maxLodDistance / 3.0f) / (maxLodDistance / 3.0f), 0.0f, 1.0f);
+
+    if(displayWire)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else if(displayPoint)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    else
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Dessin des trois niveaux de LOD avec blending
+    // for (int i = 0; i < 3; i++) {
+    //     glBindVertexArray(VAOs[i]);
+    //     glUniform1f(glGetUniformLocation(m_shaderProgram, "blendFactor"), blendFactors[i]);
+    //     glDrawElements(GL_PATCHES, indices.size(), GL_UNSIGNED_INT, 0);
+    // }
+
+    for (int i = 0; i < 3; i++) {
+        glBindVertexArray(VAOs[i]);
+        glUniform1f(glGetUniformLocation(m_shaderProgram, "blendFactor"), blendFactors[i]);
+        glDrawElements(GL_PATCHES, indices.size(), GL_UNSIGNED_INT, 0);
+    }
+
+
+    glBindVertexArray(0);
+
+    // DEBUG
+    // std::cout << "Blend factors: " << blendFactors[0] << ", "
+    //       << blendFactors[1] << ", " << blendFactors[2] << std::endl;
+
 }
 
 void Plane::drawNormals(){
@@ -139,9 +259,8 @@ void Plane::drawNormals(){
 
 
 void Plane::update(){
-    //renderLod();
-    //showImGuiLOD();
     draw();
+    //drawLOD();
     updateLightRotation();
 
     if(showNormals){
@@ -220,50 +339,75 @@ void Plane::createPlaneVAO() {
     glBindVertexArray(0);
 }
 
-void Plane::initLodFBO() {
-    glGenFramebuffers(1, &lodFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, lodFBO);
+// PLUS BESOIN
+void Plane::createPlaneLOD(int lodLevel){
 
-    glGenTextures(1, &lodTexture);
-    glBindTexture(GL_TEXTURE_2D, lodTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    float halfSize = size / 2.0f;
+    float step = size / (resolution >> lodLevel); // Résolution réduite pour les niveaux inférieurs
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lodTexture, 0);
+    std::vector<float> vertices;
+    std::vector<float> normals;
+    std::vector<float> uvs;
+    std::vector<unsigned int> indices;
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "Error while creating FBO" << std::endl;
+    for (unsigned int z = 0; z <= resolution >> lodLevel; ++z) {
+        for (unsigned int x = 0; x <= resolution >> lodLevel; ++x) {
+            float xPos = -halfSize + x * step;
+            float zPos = -halfSize + z * step;
+
+            vertices.push_back(xPos);
+            vertices.push_back(0.0f);
+            vertices.push_back(zPos);
+
+            normals.push_back(0.0f);
+            normals.push_back(1.0f);
+            normals.push_back(0.0f);
+
+            uvs.push_back(static_cast<float>(x) / (resolution >> lodLevel));
+            uvs.push_back(static_cast<float>(z) / (resolution >> lodLevel));
+        }
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
+    for (unsigned int z = 0; z < (resolution >> lodLevel); ++z) {
+        for (unsigned int x = 0; x < (resolution >> lodLevel); ++x) {
+            unsigned int topLeft = (z + 1) * ((resolution >> lodLevel) + 1) + x;
+            unsigned int topRight = topLeft + 1;
+            unsigned int bottomLeft = z * ((resolution >> lodLevel) + 1) + x;
+            unsigned int bottomRight = bottomLeft + 1;
 
-void Plane::renderLod() {
-    glBindFramebuffer(GL_FRAMEBUFFER, lodFBO);
-    glViewport(0, 0, 1024, 1024);
-    glClear(GL_COLOR_BUFFER_BIT);
+            indices.push_back(bottomLeft);
+            indices.push_back(topRight);
+            indices.push_back(topLeft);
 
-    glUseProgram(m_lodShaderProgram);
+            indices.push_back(bottomLeft);
+            indices.push_back(bottomRight);
+            indices.push_back(topRight);
+        }
+    }
 
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
-    const glm::mat4& viewMatrix = camera_plan->getViewMatrix();
-    const glm::mat4& projectionMatrix = camera_plan->getProjectionMatrix();
+    glGenVertexArrays(1, &VAOs[lodLevel]);
+    glGenBuffers(1, &VBOs[lodLevel]);
+    glGenBuffers(1, &EBOs[lodLevel]);
 
-    glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
-    glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
-    glUniformMatrix4fv(glGetUniformLocation(m_lodShaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
-    glUniform1f(glGetUniformLocation(m_lodShaderProgram, "lodDistance"), maxLodDistance); 
-    glUniform1f(glGetUniformLocation(m_lodShaderProgram, "heightScale"), heightScale);
+    glBindVertexArray(VAOs[lodLevel]);
 
-    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
-    glUniform1i(glGetUniformLocation(m_lodShaderProgram, "heightMap"), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[lodLevel]);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[lodLevel]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
     glBindVertexArray(0);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // DEBUG
+    std::cout << "LOD " << lodLevel << ": VAO = " << VAOs[lodLevel]
+          << ", VBO = " << VBOs[lodLevel]
+          << ", EBO = " << EBOs[lodLevel] << std::endl;
+
+    std::cout << "LOD " << lodLevel << ": indices.size() = " << indices.size() << std::endl;
+
 }
 
 GLuint Plane::loadTexture(const std::string &path)
@@ -299,10 +443,6 @@ void Plane::showImGuiInterface() {
 
     ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Info Plan")) {
-        ImGui::Text("Couleur(%f,%f,%f)", color.x, color.y, color.z);
-		ImGui::SliderFloat("R", &color.x, 0.0f, 1.0f);
-		ImGui::SliderFloat("G", &color.y, 0.0f, 1.0f);
-		ImGui::SliderFloat("B", &color.z, 0.0f, 1.0f);
 
         if (ImGui::SliderFloat("Size", &size, 10.0f, 1000.0f)) {
             if (size != prevSize) {
@@ -317,9 +457,9 @@ void Plane::showImGuiInterface() {
             }
         }
         ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
-        if (ImGui::SliderFloat("LOD Distance", &maxLodDistance, 10.0f, 500.0f)) {
-            //renderLod();
-        }
+        if (ImGui::SliderFloat("LOD Distance", &maxLodDistance, 10.0f, 500.0f));
+            morphDistance = maxLodDistance * morphFactor;
+        ImGui::SliderFloat("Morph Factor", &morphFactor, 0.1f, 1.0f);
         ImGui::SliderFloat("Grass Limit", &grassLimit, -1.0f, 1.0f);
         ImGui::SliderFloat("Rock Limit", &rockLimit, -1.0f, 1.0f);
 
@@ -340,12 +480,49 @@ void Plane::showImGuiInterface() {
     ImGui::End();
 }
 
-void Plane::showImGuiLOD() {
-    if (ImGui::Begin("LOD Preview")) {
-        ImGui::Image((void*)(intptr_t)lodTexture, ImVec2(300, 300));
+// PLUS BESOIN
+void Plane::showImGuiInterfaceLOD() {
+    static float prevSize = size;
+    static int prevResolution = resolution;
+
+    ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Info Plan")) {
+
+        if (ImGui::SliderFloat("Size", &size, 10.0f, 1000.0f)) {
+            if (size != prevSize) {
+                recreatePlaneLOD();
+                prevSize = size;
+            }
+        }
+        if (ImGui::SliderInt("Resolution", &resolution, 1, 200)) {
+            if (resolution != prevResolution) {
+                recreatePlaneLOD();
+                prevResolution = resolution;
+            }
+        }
+
+        ImGui::SliderFloat("Scale hauteur", &heightScale, 1.0f, 100.0f);
+        ImGui::SliderFloat("LOD Distance", &maxLodDistance, 10.0f, 500.0f);
+        ImGui::SliderFloat("Grass Limit", &grassLimit, -1.0f, 1.0f);
+        ImGui::SliderFloat("Rock Limit", &rockLimit, -1.0f, 1.0f);
+
+        ImGui::Separator();
+        ImGui::Text(" === Modes d'affichage ===");
+        if(ImGui::Checkbox("Afficher les triangles", &displayWire)){
+            displayPoint = false;
+        }
+        ImGui::SameLine();
+        if(ImGui::Checkbox("Afficher les points", &displayPoint)){
+            displayWire = false;
+        }
+        ImGui::Checkbox("Afficher les normales", &showNormals);
+
+        ImGui::Text(" === Lumière ===");
+        ImGui::SliderFloat("Angle rotation", &lightRotationAngle, -180.0f, 180.0f);
     }
     ImGui::End();
 }
+
 
 void Plane::recreatePlane() {
     glDeleteVertexArrays(1, &VAO);
@@ -362,6 +539,20 @@ void Plane::recreatePlane() {
 
     createPlaneVAO();
 }
+
+// PLUS BESOIN
+void Plane::recreatePlaneLOD() {
+    for (int i = 0; i < 3; i++) {
+        glDeleteVertexArrays(1, &VAOs[i]);
+        glDeleteBuffers(1, &VBOs[i]);
+        glDeleteBuffers(1, &EBOs[i]);
+    }
+    for (int i = 0; i < 3; i++) {
+        createPlaneLOD(i);
+    }
+}
+
+
 
 void Plane::initLight(){
     lightDirection = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -391,4 +582,16 @@ float Plane::getHeightScale() const{
 
 void Plane::setHeightMap(GLuint heightMapID){
     m_heightMapID = heightMapID;
+}
+
+int Plane::getLodDistance() const{
+    return maxLodDistance;
+}
+
+int Plane::getMorphFactor() const{
+    return morphFactor;
+}
+
+int Plane::getMorphDistance() const{
+    return morphDistance;
 }
