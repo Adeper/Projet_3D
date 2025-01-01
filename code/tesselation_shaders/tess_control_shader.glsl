@@ -55,14 +55,17 @@ uniform float u_TessDistance;       // Distance pour définir les niveaux de tes
 
 in vec3 FragPos[];                  // Position des fragments depuis le Vertex Shader
 in vec2 UV[];                       // Reçoit les UV du Vertex Shader
+in vec3 Normal[];                   // Reçoit les normales du Vertex Shader
 
 out vec3 tcsFragPos[];              // Pour transmettre au TES
 out vec2 tcsUV[];                   // Envoie les UV au TES
+out vec3 tcsNormal[];               // Envoie les normales au TES
 
 
 void main() {
     tcsFragPos[gl_InvocationID] = FragPos[gl_InvocationID];
     tcsUV[gl_InvocationID] = UV[gl_InvocationID];
+    tcsNormal[gl_InvocationID] = Normal[gl_InvocationID];
 
     // Calcul de la position du centre du patch et conversion en espace de vue
     vec3 patchCenter = (FragPos[0] + FragPos[1] + FragPos[2]) / 3.0;
