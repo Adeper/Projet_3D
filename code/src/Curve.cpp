@@ -2,12 +2,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <shader.hpp>
 #include <iostream>
+#include <stb_image.h>
 
 Curve::Curve(PlaneLOD* terrain)
     : terrain(terrain), VAO(0), VBO(0), curveType(BEZIER) {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
+    color = glm::vec3(1.0f, 0.0f, 0.0f);
+    useTexture = false;
 }
 
 Curve::~Curve() {
@@ -68,12 +71,23 @@ void Curve::draw() {
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, &projMatrix[0][0]);
 
+    if (useTexture) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glUniform1i(glGetUniformLocation(shaderProgram, "curveTexture"), 0);
+        glUniform1i(glGetUniformLocation(shaderProgram, "useTexture"), 1);
+    } else {
+        glUniform1i(glGetUniformLocation(shaderProgram, "useTexture"), 0);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, &color[0]);
+    }
+
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINE_STRIP, 0, curvePoints.size());
     glBindVertexArray(0);
 
     glUseProgram(0);
 }
+
 
 void Curve::computeBezierCurve() {
     for (int i = 0; i <= terrain->getResolution(); ++i) {
@@ -122,3 +136,63 @@ void Curve::applyHeightToCurve() {
         point.y = terrain->getHeightDataAt(point.x, point.z) * terrain->getHeightScale();
     }
 }
+
+void Curve::showImGuiInterface() {
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Info courbe")) {
+        ImGui::Text("Type de courbe");
+        ImGui::RadioButton("Bézier", reinterpret_cast<int*>(&curveType), BEZIER);
+        ImGui::RadioButton("Catmull-Rom", reinterpret_cast<int*>(&curveType), CATMULL_ROM);
+        ImGui::RadioButton("Approximation", reinterpret_cast<int*>(&curveType), APPROXIMATION);
+
+        ImGui::Separator();
+        ImGui::ColorEdit3("Couleur", &color[0]);
+        ImGui::Checkbox("Charger une texture", &useTexture);
+        if (useTexture) {
+            try {
+                loadTexture(std::string("../textures/road.jpg"));
+            } catch (const std::exception& e) {
+                std::cerr << "Error loading texture: " << e.what() << std::endl;
+            }
+        }
+        if (ImGui::Button("Reload Shaders")) {
+            reloadShaders();
+        }
+
+    }
+    ImGui::End();
+}
+
+void Curve::loadTexture(const std::string &path) {
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+
+    if (!data) {
+        stbi_image_free(data);
+        throw std::runtime_error("Failed to load texture: " + path);
+    }
+
+    GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    useTexture = true;
+
+}
+
+void Curve::reloadShaders() {
+    glDeleteProgram(shaderProgram);
+    shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
+    update();
+}
+

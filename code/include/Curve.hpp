@@ -7,6 +7,11 @@
 #include <string>
 #include <vector>
 
+// Include GLM
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+
 class Curve {
 public:
     enum CurveType {
@@ -22,6 +27,7 @@ public:
     void setCurveType(CurveType type);
     void update();
     void draw();
+    void showImGuiInterface();
 
 private:
     std::vector<glm::vec3> controlPoints;  // Points de contrôle
@@ -30,6 +36,9 @@ private:
     GLuint VAO, VBO;                       // Buffers OpenGL
     GLuint shaderProgram;                  // Programme shader
     CurveType curveType;                   // Type de courbe sélectionné
+    glm::vec3 color;                       // Couleur de la courbe
+    bool useTexture;                       // Utilisation d'une texture
+    GLuint textureID;                      // Texture de la courbe
 
     // Méthodes spécifiques aux types de courbes
     void computeBezierCurve();
@@ -41,6 +50,9 @@ private:
 
     glm::vec3 deCasteljau(float t) const;  // Algorithme pour Bézier
     glm::vec3 catmullRom(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) const;
+
+    void reloadShaders();
+    void loadTexture(const std::string& path);
 };
 
 #endif

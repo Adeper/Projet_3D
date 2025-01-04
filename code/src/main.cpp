@@ -50,6 +50,7 @@ bool show_noise_window = false;
 bool show_noise_visible_window = false;
 bool show_camera_window = false;
 bool show_plane_window = false;
+bool show_road_window = false;
 
 // Touches release/pressed:
 bool isNpressed = false;
@@ -57,6 +58,7 @@ bool isVpressed = false;
 bool isCpressed = false;
 bool isPpressed = false;
 bool isTpressed = false;
+bool isRpressed = false;
 
 GLuint computeNoiseProgram, vertexNoiseProgram, fragmentNoiseProgram;
 GLuint noiseTexture; 
@@ -122,7 +124,7 @@ int main(void)
     // chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
     Curve chemin(&terrain);
     chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
-    chemin.setCurveType(Curve::APPROXIMATION);
+    chemin.setCurveType(Curve::BEZIER);
 
     glDisable(GL_CULL_FACE);
 
@@ -187,6 +189,9 @@ int main(void)
 
         if (show_camera_window)
             mainCamera.updateInterface(deltaTime); // Interface ImGui pour les paramètres de la caméra
+
+        if (show_road_window)
+            chemin.showImGuiInterface(); // Interface ImGui pour les paramètres de la route
 
         mainCamera.update(deltaTime, window);
 
@@ -349,6 +354,15 @@ void processInput(){
     }
     if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) {
         isTpressed = false;
+    }
+
+    // Si on appuie sur la touche R on ouvre les paramètres de la route
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !isRpressed) {
+        show_road_window = !show_road_window;
+        isRpressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
+        isRpressed = false;
     }
 }
 
