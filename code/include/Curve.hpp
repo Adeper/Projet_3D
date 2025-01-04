@@ -37,6 +37,7 @@ private:
     GLuint shaderProgram;                  // Programme shader
     CurveType curveType;                   // Type de courbe sélectionné
     glm::vec3 color;                       // Couleur de la courbe
+    float curveWidth;                      // Largeur de la courbe
     bool useTexture;                       // Utilisation d'une texture
     GLuint textureID;                      // Texture de la courbe
     float heightOffset;                    // Décalage pour éviter l'interpénétration
@@ -56,6 +57,8 @@ private:
 
     void reloadShaders();
     void loadTexture(const std::string& path);
+
+    void addPointForWidth();
 };
 
 #endif

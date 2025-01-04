@@ -12,6 +12,7 @@ Curve::Curve(PlaneLOD* terrain)
     color = glm::vec3(1.0f, 0.0f, 0.0f);
     useTexture = false;
     heightOffset = 0.1f;
+    curveWidth = 1.0f;
     initControlPointsFromTerrain();
 }
 
@@ -50,6 +51,7 @@ void Curve::update() {
     }
 
     applyHeightToCurve();
+    addPointForWidth();
     initControlPointsFromTerrain();
 
     glBindVertexArray(VAO);
@@ -141,7 +143,7 @@ void Curve::applyHeightToCurve() {
 }
 
 void Curve::showImGuiInterface() {
-    ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 275), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Info courbe")) {
         ImGui::Text("Type de courbe");
         ImGui::RadioButton("Bézier", reinterpret_cast<int*>(&curveType), BEZIER);
@@ -150,6 +152,9 @@ void Curve::showImGuiInterface() {
 
         ImGui::Separator();
         ImGui::SliderFloat("Décalage hauteur", &heightOffset, 0.0f, 1.0f);
+
+        ImGui::Separator();
+        ImGui::SliderFloat("Largeur de la courbe", &curveWidth, 0.1f, 5.0f);
 
         ImGui::Separator();
         ImGui::ColorEdit3("Couleur", &color[0]);
@@ -220,6 +225,33 @@ void Curve::initControlPointsFromTerrain() {
             controlPoints.push_back(point);
         }
     }
+}
+
+void Curve::addPointForWidth() {
+    
+    // Ajouter des points pour la largeur
+    std::vector<glm::vec3> widenedCurvePoints;
+    for (size_t i = 0; i < curvePoints.size(); ++i) {
+        glm::vec3 currentPoint = curvePoints[i];
+
+        // Calcul de la direction tangentielle
+        glm::vec3 tangent;
+        if (i < curvePoints.size() - 1) {
+            tangent = glm::normalize(curvePoints[i + 1] - currentPoint);
+        } else {
+            tangent = glm::normalize(currentPoint - curvePoints[i - 1]);
+        }
+
+        // Calcul du vecteur perpendiculaire à la tangente
+        glm::vec3 normal = glm::cross(tangent, glm::vec3(0.0f, 1.0f, 0.0f));
+        normal = glm::normalize(normal) * curveWidth * 0.5f;
+
+        // Ajouter deux points pour simuler la largeur
+        widenedCurvePoints.push_back(currentPoint + normal); // Point à gauche
+        widenedCurvePoints.push_back(currentPoint - normal); // Point à droite
+    }
+
+    curvePoints = widenedCurvePoints;
 }
 
 
