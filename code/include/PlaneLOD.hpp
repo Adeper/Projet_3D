@@ -29,6 +29,8 @@ public:
     int getMorphFactor() const;
     int getMorphDistance() const;
 
+    Camera* getCamera() const;
+
     void setHeightMap(GLuint heightMapID);
     GLuint getHeightMap() const;
     void showImGuiInterface();
@@ -36,6 +38,11 @@ public:
     void recreatePlane();
 
     void debugImgui();
+
+    const std::vector<float>& getHeightData() const;
+    void setHeight();
+
+    float getHeightDataAt(float x, float z) const;
 
 private:
     void createPlaneVAO();
@@ -55,6 +62,7 @@ private:
     float maxLodDistance;
     float morphFactor;
     float morphDistance;
+    std::vector<float> m_heightData;
 
     std::vector<float> vertices;
     std::vector<unsigned int> indices;

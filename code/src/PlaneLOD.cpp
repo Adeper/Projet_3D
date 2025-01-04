@@ -25,11 +25,6 @@ PlaneLOD::PlaneLOD(float new_size, unsigned int new_resolution, Camera* cam) {
     color = glm::vec3(1.f, 1.f, 1.f);
 
     createPlaneVAO();
-    
-    // Création des trois niveaux de LOD
-    // for (int i = 0; i < 3; i++) {
-    //     createPlaneLOD(i);
-    // }
 
     m_shaderProgram = LoadShadersV2("../shaders/vertex_shader.glsl", "../shaders/fragment_shader.glsl", "../tesselation_shaders/tess_control_shader.glsl", "../tesselation_shaders/tess_eval_shader.glsl", nullptr);
     m_normalShaderProgram = LoadShaders("../shaders/normal_vertex_shader.glsl", "../shaders/normal_fragment_shader.glsl", "../shaders/normal_geometry_shader.glsl");
@@ -177,11 +172,6 @@ void PlaneLOD::drawNormals(){
 void PlaneLOD::update(){
     draw();
     updateLightRotation();
-
-    // DEBUG : affichage du blend factor
-    // std::cout << "Blend factors: " << blendFactors[0] << ", "
-    //       << blendFactors[1] << ", " << blendFactors[2] << std::endl;
-
 
     if(showNormals){
         drawNormals();
@@ -399,6 +389,7 @@ float PlaneLOD::getHeightScale() const{
 
 void PlaneLOD::setHeightMap(GLuint heightMapID){
     m_heightMapID = heightMapID;
+    setHeight();
 }
 
 int PlaneLOD::getLodDistance() const{
@@ -411,4 +402,44 @@ int PlaneLOD::getMorphFactor() const{
 
 int PlaneLOD::getMorphDistance() const{
     return morphDistance;
+}
+void PlaneLOD::setHeight() {
+    if (m_heightMapID == 0) {
+        std::cerr << "Height map ID invalide!" << std::endl;
+        return;
+    }
+
+    // Synchronisation GPU-CPU
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    m_heightData.resize(resolution * resolution);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, m_heightData.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+const std::vector<float>& PlaneLOD::getHeightData() const {
+    return m_heightData;
+}
+
+Camera* PlaneLOD::getCamera() const {
+    return camera_plan;
+}
+
+float PlaneLOD::getHeightDataAt(float x, float z) const {
+    if (m_heightData.empty() || resolution <= 0) {
+        std::cerr << "Height data not available!" << std::endl;
+        return 0.0f;
+    }
+
+    float normalizedX = glm::clamp(x / size, 0.0f, 1.0f);
+    float normalizedZ = glm::clamp(z / size, 0.0f, 1.0f);
+
+    int ix = static_cast<int>(normalizedX * resolution);
+    int iz = static_cast<int>(normalizedZ * resolution);
+
+    return m_heightData[iz * resolution + ix];
 }

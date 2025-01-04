@@ -29,6 +29,7 @@ GLFWwindow* window;
 #include <PlaneLOD.hpp>
 #include <Noise.hpp>
 #include <BezierCurve.hpp>
+#include <Curve.hpp>
 #include <Globals.hpp>
 
 // Paramètres de la caméra
@@ -117,8 +118,11 @@ int main(void)
 
     PlaneLOD terrain(10.f, 10, &mainCamera);
 
-    BezierCurve chemin(terrain.getResolution(), terrain.getSize());
+    // BezierCurve chemin(terrain.getResolution(), &mainCamera);
+    // chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
+    Curve chemin(&terrain);
     chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
+    chemin.setCurveType(Curve::APPROXIMATION);
 
     glDisable(GL_CULL_FACE);
 
@@ -200,10 +204,14 @@ int main(void)
         
         noise.setResolution(terrain.getResolution());
         terrain.setHeightMap(noise.getTextureNoise());
-        
-        chemin.update(terrain.getSize(), terrain.getResolution(), terrain.getHeightScale());
-        
-        chemin.draw(viewMatrix, projMatrix);
+
+        // chemin.setResolution(terrain.getResolution());
+        // chemin.setHeightData(terrain.getHeightData());
+        // chemin.update();
+
+        chemin.update();
+        chemin.draw();
+
 
         processInput();
 
