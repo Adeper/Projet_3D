@@ -443,3 +443,8 @@ float PlaneLOD::getHeightDataAt(float x, float z) const {
 
     return m_heightData[iz * resolution + ix];
 }
+
+const std::vector<float>& PlaneLOD::getVertices() const {
+    return vertices;
+}
+

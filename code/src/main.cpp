@@ -123,8 +123,7 @@ int main(void)
     // BezierCurve chemin(terrain.getResolution(), &mainCamera);
     // chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
     Curve chemin(&terrain);
-    chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
-    chemin.setCurveType(Curve::BEZIER);
+    chemin.setCurveType(Curve::CATMULL_ROM);
 
     glDisable(GL_CULL_FACE);
 

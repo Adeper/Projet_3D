@@ -11,6 +11,8 @@ Curve::Curve(PlaneLOD* terrain)
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
     color = glm::vec3(1.0f, 0.0f, 0.0f);
     useTexture = false;
+    heightOffset = 0.1f;
+    initControlPointsFromTerrain();
 }
 
 Curve::~Curve() {
@@ -19,14 +21,14 @@ Curve::~Curve() {
     glDeleteProgram(shaderProgram);
 }
 
-void Curve::initControlPoints(const glm::vec3& startPoint, const glm::vec3& endPoint, int nbControlPoints) {
-    controlPoints.clear();
-    for (int i = 0; i < nbControlPoints; ++i) {
-        float t = static_cast<float>(i) / (nbControlPoints - 1);
-        glm::vec3 point = (1 - t) * startPoint + t * endPoint;
-        controlPoints.push_back(point);
-    }
-}
+// void Curve::initControlPoints(const glm::vec3& startPoint, const glm::vec3& endPoint, int nbControlPoints) {
+//     controlPoints.clear();
+//     for (int i = 0; i < nbControlPoints; ++i) {
+//         float t = static_cast<float>(i) / (nbControlPoints - 1);
+//         glm::vec3 point = (1 - t) * startPoint + t * endPoint;
+//         controlPoints.push_back(point);
+//     }
+// }
 
 void Curve::setCurveType(CurveType type) {
     curveType = type;
@@ -48,6 +50,7 @@ void Curve::update() {
     }
 
     applyHeightToCurve();
+    initControlPointsFromTerrain();
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -133,17 +136,20 @@ glm::vec3 Curve::catmullRom(float t, const glm::vec3& p0, const glm::vec3& p1, c
 
 void Curve::applyHeightToCurve() {
     for (auto& point : curvePoints) {
-        point.y = terrain->getHeightDataAt(point.x, point.z) * terrain->getHeightScale();
+        point.y = terrain->getHeightDataAt(point.x, point.z) * terrain->getHeightScale() + heightOffset;
     }
 }
 
 void Curve::showImGuiInterface() {
-    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Info courbe")) {
         ImGui::Text("Type de courbe");
         ImGui::RadioButton("Bézier", reinterpret_cast<int*>(&curveType), BEZIER);
         ImGui::RadioButton("Catmull-Rom", reinterpret_cast<int*>(&curveType), CATMULL_ROM);
         ImGui::RadioButton("Approximation", reinterpret_cast<int*>(&curveType), APPROXIMATION);
+
+        ImGui::Separator();
+        ImGui::SliderFloat("Décalage hauteur", &heightOffset, 0.0f, 1.0f);
 
         ImGui::Separator();
         ImGui::ColorEdit3("Couleur", &color[0]);
@@ -152,9 +158,10 @@ void Curve::showImGuiInterface() {
             try {
                 loadTexture(std::string("../textures/road.jpg"));
             } catch (const std::exception& e) {
-                std::cerr << "Error loading texture: " << e.what() << std::endl;
+                std::cerr << "Erreur : " << e.what() << std::endl;
             }
         }
+
         if (ImGui::Button("Reload Shaders")) {
             reloadShaders();
         }
@@ -172,7 +179,7 @@ void Curve::loadTexture(const std::string &path) {
 
     if (!data) {
         stbi_image_free(data);
-        throw std::runtime_error("Failed to load texture: " + path);
+        throw std::runtime_error("Erreur lors du chargement des textures: " + path);
     }
 
     GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
@@ -195,4 +202,24 @@ void Curve::reloadShaders() {
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
     update();
 }
+
+void Curve::initControlPointsFromTerrain() {
+    controlPoints.clear();
+    const std::vector<float>& terrainVertices = terrain->getVertices();
+
+    //utiliser les sommets d'une ligne (fixer z et itérer sur x)
+    int terrainResolution = terrain->getResolution();
+    for (int x = 0; x < terrainResolution; ++x) {
+        int vertexIndex = (x + (terrainResolution / 2) * terrainResolution) * 3; // Indice dans le tableau
+        if (vertexIndex + 2 < terrainVertices.size()) {
+            glm::vec3 point(
+                terrainVertices[vertexIndex],     // x
+                terrainVertices[vertexIndex + 1], // y
+                terrainVertices[vertexIndex + 2]  // z
+            );
+            controlPoints.push_back(point);
+        }
+    }
+}
+
 

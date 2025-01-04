@@ -23,7 +23,7 @@ public:
     Curve(PlaneLOD* terrain);
     ~Curve();
 
-    void initControlPoints(const glm::vec3& startPoint, const glm::vec3& endPoint, int nbControlPoints);
+    // void initControlPoints(const glm::vec3& startPoint, const glm::vec3& endPoint, int nbControlPoints);
     void setCurveType(CurveType type);
     void update();
     void draw();
@@ -39,6 +39,9 @@ private:
     glm::vec3 color;                       // Couleur de la courbe
     bool useTexture;                       // Utilisation d'une texture
     GLuint textureID;                      // Texture de la courbe
+    float heightOffset;                    // Décalage pour éviter l'interpénétration
+
+    void initControlPointsFromTerrain();
 
     // Méthodes spécifiques aux types de courbes
     void computeBezierCurve();

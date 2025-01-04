@@ -44,6 +44,9 @@ public:
 
     float getHeightDataAt(float x, float z) const;
 
+    const std::vector<float>& getVertices() const;
+
+
 private:
     void createPlaneVAO();
     GLuint loadTexture(const std::string &path);
