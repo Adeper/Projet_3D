@@ -33,7 +33,7 @@ PlaneLOD::PlaneLOD(float new_size, unsigned int new_resolution, Camera* cam) {
     m_rockTextureID = loadTexture("../textures/rock.png");
     m_snowTextureID = loadTexture("../textures/snowrocks.png");
 
-    grassLimit = 0.4f;
+    grassLimit = 0.3f;
     rockLimit = 0.7f;
 
     initLight();
@@ -86,6 +86,11 @@ void PlaneLOD::draw() {
     glm::vec3 cameraPos = camera_plan->getPosition(); // Récupérer la position de la caméra
     glUniform3f(glGetUniformLocation(m_shaderProgram, "cameraPosition"), cameraPos.x, cameraPos.y, cameraPos.z);
 
+    // Transmettre la distance maximale du LOD
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
+
+    // == TENTATIVE DE REGLER PROBLEME DE TRANSITION DE LOD == //
+
     // Récupérer les paramètres de la caméra
     float nearPlane = camera_plan->getNear();
     float farPlane = camera_plan->getFar();
@@ -96,24 +101,9 @@ void PlaneLOD::draw() {
     glUniform1f(glGetUniformLocation(m_shaderProgram, "u_Far"), -farPlane);
     glUniform1f(glGetUniformLocation(m_shaderProgram, "u_TessDistance"), tessDistance);
 
-    // Transmettre la distance maximale du LOD
-    glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
-
     // Transmettre la distance de morphing
     morphDistance = maxLodDistance * morphFactor;
     glUniform1f(glGetUniformLocation(m_shaderProgram, "morphDistance"), morphDistance);
-
-    // Transmettre la resolution du terrain
-    glUniform1i(glGetUniformLocation(m_shaderProgram, "resolution"), resolution);
-
-    //Transmettre les limites de mon truc
-    glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
-    glUniform1f(glGetUniformLocation(m_shaderProgram, "rockLimit"), rockLimit);
-
-    // Les lights
-    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightDirection"), lightDirection.r, lightDirection.g, lightDirection.b);
-    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightColor"), lightColor.r, lightColor.g, lightColor.b);
-    glUniform3f(glGetUniformLocation(m_shaderProgram, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
 
     glm::vec3 planeCenter(0.0f, 0.0f, 0.0f);
     float distance = glm::distance(cameraPos, planeCenter);
@@ -127,7 +117,19 @@ void PlaneLOD::draw() {
         glUniform1f(glGetUniformLocation(m_shaderProgram, "blendFactor"), blendFactors[i]);
     }
 
-    //glBindTexture(GL_TEXTURE_2D, m_textureID);
+    // == //
+
+    // Transmettre la resolution du terrain
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "resolution"), resolution);
+
+    //Transmettre les limites de mon truc
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "rockLimit"), rockLimit);
+
+    // Les lights
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightDirection"), lightDirection.r, lightDirection.g, lightDirection.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightColor"), lightColor.r, lightColor.g, lightColor.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
 
     if(displayWire)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -138,14 +140,13 @@ void PlaneLOD::draw() {
 
     // Dessiner les triangles
     glBindVertexArray(VAO);
-    //glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
-    glDrawElements(GL_PATCHES, m_indexCount, GL_UNSIGNED_INT, 0); // Mode GL_PATCHES
+    glDrawElements(GL_PATCHES, m_indexCount, GL_UNSIGNED_INT, 0); 
     glBindVertexArray(0);
 
-    // Réinitialiser le mode de polygone
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+// == DEBUG : Affiche normales == //
 void PlaneLOD::drawNormals(){
     glUseProgram(m_normalShaderProgram);
 
@@ -366,7 +367,7 @@ void PlaneLOD::initLight(){
     lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     ambientColor = glm::vec3(0.2f, 0.2f, 0.2f);
 
-    lightRotationAngle = 0.0f;
+    lightRotationAngle = 100.0f;
 }
 
 void PlaneLOD::updateLightRotation(){
@@ -431,7 +432,7 @@ Camera* PlaneLOD::getCamera() const {
 
 float PlaneLOD::getHeightDataAt(float x, float z) const {
     if (m_heightData.empty() || resolution <= 0) {
-        std::cerr << "Height data not available!" << std::endl;
+        std::cerr << "Height data pas disponible!" << std::endl;
         return 0.0f;
     }
 

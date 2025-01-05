@@ -4,8 +4,8 @@
 #include <iostream>
 #include <stb_image.h>
 
-Curve::Curve(PlaneLOD* terrain)
-    : terrain(terrain), VAO(0), VBO(0), curveType(BEZIER) {
+Curve::Curve(PlaneLOD* terrain, Noise* noise)
+    : terrain(terrain), noise(noise), VAO(0), VBO(0), curveType(BEZIER) {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
@@ -21,15 +21,6 @@ Curve::~Curve() {
     glDeleteBuffers(1, &VBO);
     glDeleteProgram(shaderProgram);
 }
-
-// void Curve::initControlPoints(const glm::vec3& startPoint, const glm::vec3& endPoint, int nbControlPoints) {
-//     controlPoints.clear();
-//     for (int i = 0; i < nbControlPoints; ++i) {
-//         float t = static_cast<float>(i) / (nbControlPoints - 1);
-//         glm::vec3 point = (1 - t) * startPoint + t * endPoint;
-//         controlPoints.push_back(point);
-//     }
-// }
 
 void Curve::setCurveType(CurveType type) {
     curveType = type;
@@ -142,8 +133,41 @@ void Curve::applyHeightToCurve() {
     }
 }
 
+void Curve::applyNoiseToCurve() {
+    if (!noise) return;
+
+    GLuint noiseTexture = noise->getTextureNoise();
+    int noiseResolution = noise->getResolution();
+
+    glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
+    // Lecture des données de la texture de bruit dans le CPU (si nécessaire)
+    std::vector<float> noiseData(noiseResolution * noiseResolution);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, noiseData.data());
+
+    // Appliquer le bruit à chaque point de la courbe
+    for (auto& point : curvePoints) {
+        float u = (point.x + 10.0f) / 20.0f; // Normalisation entre 0 et 1 (si -10 <= x <= 10)
+        float v = (point.z + 10.0f) / 20.0f;
+
+        // Convertir en coordonnées texture
+        int x = static_cast<int>(u * (noiseResolution - 1));
+        int y = static_cast<int>(v * (noiseResolution - 1));
+
+        // Index dans les données de la texture
+        int index = y * noiseResolution + x;
+
+        // Perturbation par le bruit
+        float noiseValue = noiseData[index];
+        point.y += noiseValue * 0.5f; // Ajuster l'échelle du bruit si nécessaire
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
 void Curve::showImGuiInterface() {
-    ImGui::SetNextWindowSize(ImVec2(400, 275), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Info courbe")) {
         ImGui::Text("Type de courbe");
         ImGui::RadioButton("Bézier", reinterpret_cast<int*>(&curveType), BEZIER);
@@ -166,6 +190,22 @@ void Curve::showImGuiInterface() {
                 std::cerr << "Erreur : " << e.what() << std::endl;
             }
         }
+
+        ImGui::Separator();
+        // DEBUG
+        // if (ImGui::CollapsingHeader("Points de Contrôle")) {
+        //     for (size_t i = 0; i < controlPoints.size(); ++i) {
+        //         ImGui::SliderFloat3(("Point " + std::to_string(i)).c_str(), &controlPoints[i].x, -10.0f, 10.0f);
+        //     }
+
+        //     if (ImGui::Button("Ajouter un Point")) {
+        //         controlPoints.push_back(controlPoints.back() + glm::vec3(1.0f, 0.0f, 0.0f));
+        //     }
+
+        //     if (controlPoints.size() > 2 && ImGui::Button("Supprimer un Point")) {
+        //         controlPoints.pop_back();
+        //     }
+        // }
 
         if (ImGui::Button("Reload Shaders")) {
             reloadShaders();
@@ -228,30 +268,23 @@ void Curve::initControlPointsFromTerrain() {
 }
 
 void Curve::addPointForWidth() {
-    
-    // Ajouter des points pour la largeur
     std::vector<glm::vec3> widenedCurvePoints;
+
     for (size_t i = 0; i < curvePoints.size(); ++i) {
         glm::vec3 currentPoint = curvePoints[i];
+        glm::vec3 nextPoint = (i < curvePoints.size() - 1) ? curvePoints[i + 1] : curvePoints[i - 1];
+        glm::vec3 tangent = glm::normalize(nextPoint - currentPoint);
+        glm::vec3 normal = glm::normalize(glm::cross(tangent, glm::vec3(0.0f, 1.0f, 0.0f)));
 
-        // Calcul de la direction tangentielle
-        glm::vec3 tangent;
-        if (i < curvePoints.size() - 1) {
-            tangent = glm::normalize(curvePoints[i + 1] - currentPoint);
-        } else {
-            tangent = glm::normalize(currentPoint - curvePoints[i - 1]);
-        }
+        glm::vec3 leftPoint = currentPoint - normal * (curveWidth * 0.5f);
+        glm::vec3 rightPoint = currentPoint + normal * (curveWidth * 0.5f);
 
-        // Calcul du vecteur perpendiculaire à la tangente
-        glm::vec3 normal = glm::cross(tangent, glm::vec3(0.0f, 1.0f, 0.0f));
-        normal = glm::normalize(normal) * curveWidth * 0.5f;
-
-        // Ajouter deux points pour simuler la largeur
-        widenedCurvePoints.push_back(currentPoint + normal); // Point à gauche
-        widenedCurvePoints.push_back(currentPoint - normal); // Point à droite
+        widenedCurvePoints.push_back(leftPoint);
+        widenedCurvePoints.push_back(rightPoint);
     }
 
     curvePoints = widenedCurvePoints;
 }
+
 
 

@@ -17,23 +17,12 @@
 void Noise::init(){
     
     noiseType = 0; 
-    gain = 1.0f; 
+    gain = 0.23f; 
     octaves = 4; 
-    persistence = 2.0f; 
+    persistence = 1.937f; 
     power = 1.0f; 
 
     resolution = 10;
-
-    int major, minor;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
-
-    if (major > 4 || (major == 4 && minor >= 3)){
-        useComputeShader = true;
-    }
-    else {
-        useComputeShader = false;
-    }
 
 }
 
@@ -95,24 +84,16 @@ GLuint Noise::getTextureNoise() const{
 // Quelques Set Up
 
 void Noise::setProgramID(){
-    if (useComputeShader){
-        programID = loadComputeShader("../shaders/noise_compute.glsl");
-    }
-    else {
-        programID = LoadShaders("../shaders/noise_vertex.glsl", "../shaders/noise_fragment.glsl");
-    }
+    programID = LoadShaders("../shaders/noise_vertex.glsl", "../shaders/noise_fragment.glsl");
 }
 
 void Noise::initTexture(){
 
     if (glIsTexture(noiseTexture)) {
         glDeleteTextures(1, &noiseTexture);
-
-        if(!useComputeShader){
-            glDeleteFramebuffers(1, &noiseFramebuffer);
-            glDeleteVertexArrays(1, &VAO);
-            glDeleteBuffers(1, &VBO);   
-        }
+        glDeleteFramebuffers(1, &noiseFramebuffer);
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);   
     }
 
     glGenTextures(1, &noiseTexture);
@@ -126,20 +107,16 @@ void Noise::initTexture(){
 }
 
 void Noise::setBindingTexture(){
-    if (useComputeShader){
-        glBindImageTexture(0, noiseTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-    }
-    else {
-        glGenFramebuffers(1, &noiseFramebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, noiseTexture, 0);
+    glGenFramebuffers(1, &noiseFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, noiseTexture, 0);
 
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cerr << "Erreur : Framebuffer incomplet !" << std::endl;
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0); 
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "Erreur : Framebuffer incomplet !" << std::endl;
     }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
+
 
 void Noise::initVAOVBO(){
 
@@ -214,22 +191,13 @@ void Noise::setUpParameters(){
         // Recréer la texture et mets à jour les variables
         initTexture();
         setBindingTexture();
-        if (useComputeShader){
-            glUseProgram(programID);
-            sendParameters();
-            glDispatchCompute(resolution / 16, resolution / 16, 1);
-            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-            
-        }
-        else {
-            initVAOVBO();
-            glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
-            glUseProgram(programID);
-            sendParameters();
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
+        initVAOVBO();
+        glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
+        glUseProgram(programID);
+        sendParameters();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     // Détection des changements
@@ -241,23 +209,14 @@ void Noise::setUpParameters(){
 
     if (hasChanged) {
         // Mettre à jour la texture en fonction des paramètres actuels
-        if (useComputeShader){
-            glUseProgram(programID);
+        glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
+        glUseProgram(programID);
 
-            sendParameters();
+        sendParameters();
 
-            glDispatchCompute(resolution / 16, resolution / 16, 1);
-            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-        } else {
-            glBindFramebuffer(GL_FRAMEBUFFER, noiseFramebuffer);
-            glUseProgram(programID);
-
-            sendParameters();
-
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // Mise à jour de l'état des sliders
         previousNoiseType = noiseType;
@@ -281,26 +240,15 @@ void Noise::noiseInterface(){
 
 void Noise::reloadShaders() {
     glDeleteProgram(programID);
-
-    if (useComputeShader){
-        programID = loadComputeShader("../shaders/noise_compute.glsl");
-    }
-    else {
-        programID = LoadShaders("../shaders/noise_vertex.glsl", "../shaders/noise_fragment.glsl");
-    }
+    programID = LoadShaders("../shaders/noise_vertex.glsl", "../shaders/noise_fragment.glsl");
     std::cout << "Shaders reloaded successfully!" << std::endl;
 }
 
 void Noise::destroy(){
-    if (useComputeShader){
-        glDeleteProgram(programID);
-    }
-    else {
-        glDeleteProgram(programID);
-        glDeleteFramebuffers(1, &noiseFramebuffer);
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);   
-    }
+    glDeleteProgram(programID);
+    glDeleteFramebuffers(1, &noiseFramebuffer);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);   
 
     glDeleteTextures(1, &noiseTexture);
 }

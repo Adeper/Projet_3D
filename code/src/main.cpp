@@ -25,7 +25,6 @@ GLFWwindow* window;
 #include <shader.hpp>
 #include <Camera.hpp>
 #include <Skybox.hpp>
-#include <Plane.hpp>
 #include <PlaneLOD.hpp>
 #include <Noise.hpp>
 #include <BezierCurve.hpp>
@@ -88,15 +87,11 @@ int main(void)
     // Création du programme de calcul
     Noise noise;
     noise.init(); // Initialisation des paramètres
-    noise.useComputeShader = false;
 
     noise.setProgramID(); // Charge les shaders appropriés
     noise.initTexture(); // Initialise la texture
     noise.setBindingTexture(); // Prépare le binding de la texture
-
-    if (!noise.useComputeShader) {
-        noise.initVAOVBO(); // Initialise le VAO et le VBO
-    }
+    noise.initVAOVBO(); // Initialise le VAO et le VBO
     
     Camera mainCamera;
     mainCamera.init();
@@ -122,7 +117,7 @@ int main(void)
 
     // BezierCurve chemin(terrain.getResolution(), &mainCamera);
     // chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
-    Curve chemin(&terrain);
+    Curve chemin(&terrain, &noise);
     chemin.setCurveType(Curve::CATMULL_ROM);
 
     glDisable(GL_CULL_FACE);
@@ -368,7 +363,7 @@ void processInput(){
 // Fenêtre imgui pour expliquer notre projet
 void tutoImgui() {
 
-    ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Always); // Taille fixe
+    ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_Always); // Taille fixe
     ImGui::SetNextWindowPos(ImVec2(SCR_WIDTH / 2, SCR_HEIGHT / 2), ImGuiCond_Always); // Centrée
 
     ImGui::Begin("Guide d'utilisation");
@@ -392,6 +387,10 @@ void tutoImgui() {
     ImGui::TextWrapped("4. Fenêtre des paramètres de la caméra (Touche C) :");
     ImGui::BulletText("Ajustez la position, l'angle et les paramètres de la caméra.");
     ImGui::BulletText("Permet également d'inverser les axes ou changer de mode de caméra.");
+
+    ImGui::TextWrapped("5. Fenêtre des paramètres de la route (Touche R) :");
+    ImGui::BulletText("Sélectionnez le type de courbe (Bézier, Catmull-Rom, etc.) et ajustez les paramètres.");
+    ImGui::BulletText("Permet de générer une route sur le terrain.");
 
     ImGui::Separator();
     ImGui::TextWrapped("Contrôles généraux :");

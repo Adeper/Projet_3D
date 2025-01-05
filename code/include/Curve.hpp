@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <PlaneLOD.hpp>
+#include <Noise.hpp>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,7 @@ public:
         APPROXIMATION
     };
 
-    Curve(PlaneLOD* terrain);
+    Curve(PlaneLOD* terrain, Noise* noise);
     ~Curve();
 
     // void initControlPoints(const glm::vec3& startPoint, const glm::vec3& endPoint, int nbControlPoints);
@@ -33,6 +34,7 @@ private:
     std::vector<glm::vec3> controlPoints;  // Points de contrôle
     std::vector<glm::vec3> curvePoints;    // Points calculés sur la courbe
     PlaneLOD* terrain;                     // Terrain pour les données de hauteur et autres attributs
+    Noise* noise;                          // Bruit pour les textures
     GLuint VAO, VBO;                       // Buffers OpenGL
     GLuint shaderProgram;                  // Programme shader
     CurveType curveType;                   // Type de courbe sélectionné
@@ -51,6 +53,9 @@ private:
 
     // Helper pour appliquer la hauteur depuis le terrain
     void applyHeightToCurve();
+
+    // Helper pour apliquer le bruit à la courbe
+    void applyNoiseToCurve();
 
     glm::vec3 deCasteljau(float t) const;  // Algorithme pour Bézier
     glm::vec3 catmullRom(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) const;

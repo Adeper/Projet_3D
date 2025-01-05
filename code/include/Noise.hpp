@@ -57,8 +57,6 @@ class Noise {
 
     public:
 
-        bool useComputeShader; // Pour savoir si on utilise le compute shader ou vertex/fragment shader
-
         // Setters et getters des paramètres du bruit
 
         int getNoiseType() const;

@@ -58,7 +58,6 @@ add_definitions(
 set(SHADERS
     shaders/vertex_shader.glsl
     shaders/fragment_shader.glsl
-    shaders/noise_compute.glsl
     shaders/noise_fragment.glsl
     shaders/noise_vertex.glsl
     shaders/skybox_fragment.glsl
@@ -66,17 +65,12 @@ set(SHADERS
     shaders/normal_fragment_shader.glsl
     shaders/normal_vertex_shader.glsl
     shaders/normal_geometry_shader.glsl
-    shaders/bezier_vertex_shader.glsl
-    shaders/bezier_fragment_shader.glsl
-    shaders/lod_vertex_shader.glsl
-    shaders/lod_fragment_shader.glsl
-    shaders/lod_geometry_shader.glsl
+    shaders/curve_vertex_shader.glsl
+    shaders/curve_fragment_shader.glsl
 )
 
 # Fichers tesselation shaders
 set(TESS_SHADERS
-    tesselation_shaders/lod_tess_control_shader.glsl
-    tesselation_shaders/lod_tess_evaluation_shader.glsl
     tesselation_shaders/tess_control_shader.glsl
     tesselation_shaders/tess_eval_shader.glsl
 )
