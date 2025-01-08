@@ -3,6 +3,7 @@
 #include <shader.hpp>
 #include <iostream>
 #include <stb_image.h>
+#include <objloader.hpp>
 
 Curve::Curve(PlaneLOD* terrain, Noise* noise)
     : terrain(terrain), noise(noise), VAO(0), VBO(0), curveType(BEZIER) {
@@ -10,10 +11,19 @@ Curve::Curve(PlaneLOD* terrain, Noise* noise)
     glGenBuffers(1, &VBO);
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
     color = glm::vec3(1.0f, 0.0f, 0.0f);
+    showControlPoints = false; 
     useTexture = false;
     heightOffset = 0.1f;
     curveWidth = 1.0f;
-    initControlPointsFromTerrain();
+    startPoint = glm::vec3(0. -(terrain->getSize()/2.),0.,0. -(terrain->getSize()/2.));
+    endPoint = glm::vec3(terrain->getSize()/2., 0., terrain->getSize()/2.);
+    iterationGradiant = 10;
+    nbControlPoints = 4;
+    sphereLoaded = false;
+    GLuint sphereVAO = 0;
+    GLuint sphereVBO = 0;
+    loadSphere("../data/sphere.off");
+    initControlPoints();
 }
 
 Curve::~Curve() {
@@ -26,9 +36,34 @@ void Curve::setCurveType(CurveType type) {
     curveType = type;
 }
 
+void Curve::initControlPoints() {
+    if(nbControlPoints < 4){
+        std::cerr << "Nombre de points de controle trop petit (doit etre >= 4)" << std::endl;
+        return;
+    }
+
+    controlPoints.clear();
+
+    controlPoints.push_back(startPoint);
+    controlPoints.push_back(startPoint);
+
+    // Calcul et ajout des points intermédiaires
+    for (int i = 2; i < nbControlPoints; ++i) {
+        float t = static_cast<float>(i-1) / (nbControlPoints-1);
+        glm::vec3 interpolatedPoint = glm::mix(startPoint, endPoint, t);
+        controlPoints.push_back(interpolatedPoint);
+    }
+
+    controlPoints.push_back(endPoint);
+    controlPoints.push_back(endPoint);
+}
+
 void Curve::update() {
     curvePoints.clear();
+    updateControlPoints();
+    adjustControlPoints();
 
+/*
     switch (curveType) {
         case BEZIER:
             computeBezierCurve();
@@ -40,10 +75,11 @@ void Curve::update() {
             computeApproximationCurve(controlPoints.front(), controlPoints.back());
             break;
     }
+    */
+
+    computeCatmullRomCurve();
 
     applyHeightToCurve();
-    addPointForWidth();
-    initControlPointsFromTerrain();
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -54,6 +90,107 @@ void Curve::update() {
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+}
+
+void Curve::updateControlPoints() {
+    if (controlPoints.empty()) {
+        initControlPoints();
+        return;
+    }
+
+    startPoint = glm::vec3(0. -(terrain->getSize()/2.),0.,0. -(terrain->getSize()/2.));
+    endPoint = glm::vec3(terrain->getSize()/2., 0., terrain->getSize()/2.);
+
+    controlPoints[0] = startPoint;
+    controlPoints[1] = startPoint;
+
+    for (int i = 2; i < nbControlPoints; ++i) {
+        float t = static_cast<float>(i-1) / (nbControlPoints-1);
+        controlPoints[i] = glm::mix(startPoint, endPoint, t);
+    }
+
+    controlPoints[controlPoints.size()-2] = endPoint;
+    controlPoints[controlPoints.size()-1] = endPoint;
+}
+
+void Curve::adjustControlPoints() {
+    for (int iter = 0; iter < iterationGradiant; ++iter) {
+        for (size_t i = 2; i < controlPoints.size() - 2; ++i) {
+            glm::vec3& point = controlPoints[i];
+
+
+            float stepSize = terrain->getSize() / 10.;
+
+            float heightL = terrain->getHeightDataAt(point.x - stepSize, point.z);
+            float heightR = terrain->getHeightDataAt(point.x + stepSize, point.z);
+            float heightD = terrain->getHeightDataAt(point.x, point.z - stepSize);
+            float heightU = terrain->getHeightDataAt(point.x, point.z + stepSize);
+
+            // Gradient en X et Z
+            float gradX = heightL - heightR;
+            float gradZ = heightD - heightU;
+
+            float newX = point.x + gradX;
+            float newZ = point.z + gradZ;
+
+            float sizePlanLimit = terrain->getSize() / 2.;
+
+            point.x = glm::clamp(newX, -sizePlanLimit, sizePlanLimit);
+            point.z = glm::clamp(newZ, -sizePlanLimit, sizePlanLimit);
+        }
+    }
+}
+
+void Curve::loadSphere(const std::string& filePath) {
+    // Charger la sphère depuis le fichier OFF
+    if (!loadOFF(filePath, sphereVertices, sphereFaces)) {
+        std::cerr << "Erreur lors du chargement du fichier OFF pour la sphère : " << filePath << std::endl;
+        return;
+    }
+
+    // Générer VAO et VBO pour la sphère
+    glGenVertexArrays(1, &sphereVAO);
+    glGenBuffers(1, &sphereVBO);
+
+    glBindVertexArray(sphereVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
+    glBufferData(GL_ARRAY_BUFFER, sphereVertices.size() * sizeof(glm::vec3), sphereVertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    sphereLoaded = true;
+}
+
+void Curve::drawControlPoints() {
+    if (!showControlPoints || !sphereLoaded) return;
+
+    glUseProgram(shaderProgram);
+
+    for (const auto& point : controlPoints) {
+        glm::mat4 modelMatrix = glm::translate( glm::mat4(1.0f), glm::vec3(
+                                                                            point.x,
+                                                                            terrain->getHeightDataAt(point.x, point.z) * terrain->getHeightScale() + heightOffset,
+                                                                            point.z
+                                                                        ));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f)); // Ajustez la taille des sphères
+
+        const glm::mat4& viewMatrix = terrain->getCamera()->getViewMatrix();
+        const glm::mat4& projMatrix = terrain->getCamera()->getProjectionMatrix();
+
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, &projMatrix[0][0]);
+
+        glBindVertexArray(sphereVAO);
+        glDrawArrays(GL_TRIANGLES, 0, sphereVertices.size());
+        glBindVertexArray(0);
+    }
+
+    glUseProgram(0);
 }
 
 void Curve::draw() {
@@ -80,6 +217,8 @@ void Curve::draw() {
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINE_STRIP, 0, curvePoints.size());
     glBindVertexArray(0);
+
+    drawControlPoints();
 
     glUseProgram(0);
 }
@@ -178,7 +317,15 @@ void Curve::showImGuiInterface() {
         ImGui::SliderFloat("Décalage hauteur", &heightOffset, 0.0f, 1.0f);
 
         ImGui::Separator();
-        ImGui::SliderFloat("Largeur de la courbe", &curveWidth, 0.1f, 5.0f);
+        ImGui::Checkbox("Afficher les points de controle", &showControlPoints);
+
+        ImGui::Separator();
+        ImGui::SliderInt("iteration", &iterationGradiant, 1, 15);
+
+        ImGui::Separator();
+        if(ImGui::SliderInt("Nb de points de controle", &nbControlPoints, 4, 25)){
+            initControlPoints();
+        }
 
         ImGui::Separator();
         ImGui::ColorEdit3("Couleur", &color[0]);

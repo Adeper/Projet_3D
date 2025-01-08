@@ -33,6 +33,10 @@ public:
 private:
     std::vector<glm::vec3> controlPoints;  // Points de contrôle
     std::vector<glm::vec3> curvePoints;    // Points calculés sur la courbe
+    glm::vec3 startPoint;                  // Point de debut de la courbe
+    glm::vec3 endPoint;                    // Point de fin de la courbe
+    int iterationGradiant;                 // Nb d'iteration pour le calcule de la courbe
+    int nbControlPoints;                   // nombre de points de controle
     PlaneLOD* terrain;                     // Terrain pour les données de hauteur et autres attributs
     Noise* noise;                          // Bruit pour les textures
     GLuint VAO, VBO;                       // Buffers OpenGL
@@ -40,11 +44,23 @@ private:
     CurveType curveType;                   // Type de courbe sélectionné
     glm::vec3 color;                       // Couleur de la courbe
     float curveWidth;                      // Largeur de la courbe
+    bool showControlPoints;
+    GLuint sphereVAO;                      // VAO pour la sphère
+    GLuint sphereVBO;                      // VBO pour la sphère
+    std::vector<glm::vec3> sphereVertices; // Contient les sommets de la sphère
+    std::vector<unsigned short> sphereFaces;
+    bool sphereLoaded;                     // Booléen pour vérifier si la sphère est chargée
     bool useTexture;                       // Utilisation d'une texture
     GLuint textureID;                      // Texture de la courbe
     float heightOffset;                    // Décalage pour éviter l'interpénétration
 
     void initControlPointsFromTerrain();
+    void initControlPoints();
+
+    void updateControlPoints();
+    void adjustControlPoints();
+    void loadSphere(const std::string& filePath);
+    void drawControlPoints();
 
     // Méthodes spécifiques aux types de courbes
     void computeBezierCurve();

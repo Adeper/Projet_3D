@@ -290,7 +290,7 @@ void PlaneLOD::showImGuiInterface() {
                 prevSize = size;
             }
         }
-        if (ImGui::SliderInt("Resolution", &resolution, 1, 200)) {
+        if (ImGui::SliderInt("Resolution", &resolution, 2, 200)) {
             if (resolution != prevResolution) {
                 recreatePlane();
                 prevResolution = resolution;
@@ -436,8 +436,9 @@ float PlaneLOD::getHeightDataAt(float x, float z) const {
         return 0.0f;
     }
 
-    float normalizedX = glm::clamp(x / size, 0.0f, 1.0f);
-    float normalizedZ = glm::clamp(z / size, 0.0f, 1.0f);
+    float halfSize = size / 2.0f;
+    float normalizedX = glm::clamp((x + halfSize) / size, 0.0f, 1.0f);
+    float normalizedZ = glm::clamp((z + halfSize) / size, 0.0f, 1.0f);
 
     int ix = static_cast<int>(normalizedX * resolution);
     int iz = static_cast<int>(normalizedZ * resolution);
