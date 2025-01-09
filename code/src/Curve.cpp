@@ -118,13 +118,13 @@ void Curve::adjustControlPoints() {
         for (size_t i = 2; i < controlPoints.size() - 2; ++i) {
             glm::vec3& point = controlPoints[i];
 
-
             float stepSize = terrain->getSize() / 10.;
+            float sizePlanLimit = terrain->getSize() / 2.;
 
-            float heightL = terrain->getHeightDataAt(point.x - stepSize, point.z);
-            float heightR = terrain->getHeightDataAt(point.x + stepSize, point.z);
-            float heightD = terrain->getHeightDataAt(point.x, point.z - stepSize);
-            float heightU = terrain->getHeightDataAt(point.x, point.z + stepSize);
+            float heightL = terrain->getHeightDataAt(glm::clamp(point.x - stepSize, -sizePlanLimit, sizePlanLimit), point.z);
+            float heightR = terrain->getHeightDataAt(glm::clamp(point.x + stepSize, -sizePlanLimit, sizePlanLimit), point.z);
+            float heightD = terrain->getHeightDataAt(point.x, glm::clamp(point.z - stepSize, -sizePlanLimit, sizePlanLimit));
+            float heightU = terrain->getHeightDataAt(point.x, glm::clamp(point.z + stepSize, -sizePlanLimit, sizePlanLimit));
 
             // Gradient en X et Z
             float gradX = heightL - heightR;
@@ -133,7 +133,6 @@ void Curve::adjustControlPoints() {
             float newX = point.x + gradX;
             float newZ = point.z + gradZ;
 
-            float sizePlanLimit = terrain->getSize() / 2.;
 
             point.x = glm::clamp(newX, -sizePlanLimit, sizePlanLimit);
             point.z = glm::clamp(newZ, -sizePlanLimit, sizePlanLimit);
