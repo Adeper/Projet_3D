@@ -115,8 +115,6 @@ int main(void)
 
     PlaneLOD terrain(10.f, 10, &mainCamera);
 
-    // BezierCurve chemin(terrain.getResolution(), &mainCamera);
-    // chemin.initControlPoints(glm::vec3(-2.5f, 0.0f, -2.5f), glm::vec3(2.5f, 0.0f, 2.5f), 3);
     Curve chemin(&terrain, &noise);
     chemin.setCurveType(Curve::CATMULL_ROM);
 

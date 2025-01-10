@@ -110,6 +110,10 @@ private:
 
     void reloadShaders();
     void loadTexture(const std::string& path);
+
+    // pour imgui
+    float ImVec2DistanceSqr(const ImVec2& a, const ImVec2& b);
+    void Draw2DSliderWithMultiplePoints(const char* label, ImVec2& point1, ImVec2& point2, const ImVec2& size, const ImVec2& min, const ImVec2& max);
 };
 
 #endif

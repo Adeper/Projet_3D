@@ -69,7 +69,7 @@ void Curve::initControlPoints() {
 void Curve::update() {
     curvePoints.clear();
 
-    updateStartEndPoints();
+    //updateStartEndPoints();
     
     switch (curveType) {
         case CATMULL_ROM:
@@ -257,7 +257,7 @@ float Curve::heuristic(const glm::vec3& current, const glm::vec3& goal) {
     float stepSize_local = Node::getStepSize();
     float sizePlanLimit = terrain->getSize() / 2.0f;
 
-    //std::cout << current[0] << "," << current[1] << "," << current[2] << std::endl;
+    float heightWeight = 2.0f;
 
     while (glm::distance(position, goal) > stepSize_local) {
         glm::vec3 nextPosition = position + direction * stepSize_local;
@@ -267,13 +267,18 @@ float Curve::heuristic(const glm::vec3& current, const glm::vec3& goal) {
         }
 
         nextPosition.y = terrain->getHeightDataAt(nextPosition.x, nextPosition.z) * terrain->getHeightScale() + heightOffset;
-        heuristicSum += std::abs(nextPosition.y - position.y);
+
+        float horizontalDistance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(nextPosition.x, nextPosition.z));
+        float verticalDistance = std::abs(nextPosition.y - position.y) * heightWeight;
+
+        heuristicSum += horizontalDistance + verticalDistance;
 
         position = nextPosition;
     }
 
     return heuristicSum;
 }
+
 
 
 // Spécialisation de std::hash pour glm::vec3
@@ -436,6 +441,27 @@ void Curve::showImGuiInterface() {
         ImGui::RadioButton("Catmull-Rom", reinterpret_cast<int*>(&curveType), CATMULL_ROM);
         ImGui::RadioButton("A*", reinterpret_cast<int*>(&curveType), ASTAR);
 
+        ImGui::Text("Position des points");
+
+        glm::vec2 startPoint2D = {startPoint.x, startPoint.z};
+        glm::vec2 endPoint2D = {endPoint.x, endPoint.z};
+        ImVec2 min(-terrain->getSize() / 2.0f, -terrain->getSize() / 2.0f);
+        ImVec2 max(terrain->getSize() / 2.0f, terrain->getSize() / 2.0f);
+        ImVec2 startPointImGui(startPoint2D.x, startPoint2D.y);
+        ImVec2 endPointImGui(endPoint2D.x, endPoint2D.y);
+
+        Draw2DSliderWithMultiplePoints("Points de départ et d'arrivée", startPointImGui, endPointImGui, ImVec2(150, 150), min, max);
+
+        startPoint.x = startPointImGui.x;
+        startPoint.z = startPointImGui.y;
+        startPoint.y = terrain->getHeightDataAt(startPoint.x, startPoint.z);
+
+        endPoint.x = endPointImGui.x;
+        endPoint.z = endPointImGui.y;
+        endPoint.y = terrain->getHeightDataAt(endPoint.x, endPoint.z);
+
+
+
         if(curveType == CATMULL_ROM){
             // Parametres CATMULL_ROM
             ImGui::Separator();
@@ -483,6 +509,89 @@ void Curve::showImGuiInterface() {
 
     }
     ImGui::End();
+}
+
+float Curve::ImVec2DistanceSqr(const ImVec2& a, const ImVec2& b) {
+    float dx = a.x - b.x;
+    float dy = a.y - b.y;
+    return dx * dx + dy * dy;
+}
+
+void Curve::Draw2DSliderWithMultiplePoints(const char* label, ImVec2& point1, ImVec2& point2, const ImVec2& size, const ImVec2& min, const ImVec2& max) {
+    ImGui::Text("%s", label);
+
+    // Position et taille du carré
+    ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+    ImVec2 squareSize = size;
+
+    // Dessiner le carré
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddRect(cursorPos, ImVec2(cursorPos.x + squareSize.x, cursorPos.y + squareSize.y), IM_COL32(255, 255, 255, 255));
+
+    // Dessiner les points
+    auto drawPoint = [&](ImVec2& point, ImU32 color, float radius) {
+        ImVec2 normalizedPoint(
+            (point.x - min.x) / (max.x - min.x),
+            (point.y - min.y) / (max.y - min.y)
+        );
+
+        ImVec2 pointPos(
+            cursorPos.x + normalizedPoint.x * squareSize.x,
+            cursorPos.y + normalizedPoint.y * squareSize.y
+        );
+
+        drawList->AddCircleFilled(pointPos, radius, color);
+    };
+
+    const float pointRadius = 7.0f; // Taille visuelle des points
+    const float selectionRadius = 15.0f; // Zone de tolérance pour la sélection
+
+    drawPoint(point1, IM_COL32(255, 0, 0, 255), pointRadius); // Point 1 en rouge
+    drawPoint(point2, IM_COL32(0, 0, 255, 255), pointRadius); // Point 2 en bleu
+
+    // Rendre la zone interactive
+    ImGui::InvisibleButton(label, squareSize);
+    if (ImGui::IsItemActive()) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+
+        // Calculer les positions des points sur l'écran
+        ImVec2 point1ScreenPos(
+            cursorPos.x + ((point1.x - min.x) / (max.x - min.x)) * squareSize.x,
+            cursorPos.y + ((point1.y - min.y) / (max.y - min.y)) * squareSize.y
+        );
+
+        ImVec2 point2ScreenPos(
+            cursorPos.x + ((point2.x - min.x) / (max.x - min.x)) * squareSize.x,
+            cursorPos.y + ((point2.y - min.y) / (max.y - min.y)) * squareSize.y
+        );
+
+        // Vérifier si la souris est proche d'un point
+        bool nearPoint1 = ImVec2DistanceSqr(mousePos, point1ScreenPos) < selectionRadius * selectionRadius;
+        bool nearPoint2 = ImVec2DistanceSqr(mousePos, point2ScreenPos) < selectionRadius * selectionRadius;
+
+        // Mapper la position de la souris vers les coordonnées [min, max]
+        ImVec2 clampedPos = ImVec2(
+            std::max(cursorPos.x, std::min(cursorPos.x + squareSize.x, mousePos.x)),
+            std::max(cursorPos.y, std::min(cursorPos.y + squareSize.y, mousePos.y))
+        );
+
+        ImVec2 normalizedMousePos(
+            (clampedPos.x - cursorPos.x) / squareSize.x,
+            (clampedPos.y - cursorPos.y) / squareSize.y
+        );
+
+        ImVec2 mappedMousePos(
+            min.x + normalizedMousePos.x * (max.x - min.x),
+            min.y + normalizedMousePos.y * (max.y - min.y)
+        );
+
+        // Déplacer le point sélectionné
+        if (nearPoint1) {
+            point1 = mappedMousePos;
+        } else if (nearPoint2) {
+            point2 = mappedMousePos;
+        }
+    }
 }
 
 void Curve::loadTexture(const std::string &path) {
