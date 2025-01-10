@@ -5,15 +5,23 @@
 #include <stb_image.h>
 #include <objloader.hpp>
 
+#include <queue>
+#include <unordered_map>
+#include <algorithm>
+#include <cmath>
+#include <functional>
+
+float Node::stepSize = 2.0f;
+
 Curve::Curve(PlaneLOD* terrain, Noise* noise)
-    : terrain(terrain), noise(noise), VAO(0), VBO(0), curveType(BEZIER) {
+    : terrain(terrain), noise(noise), VAO(0), VBO(0), curveType(CATMULL_ROM) {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
     color = glm::vec3(1.0f, 0.0f, 0.0f);
     showControlPoints = false; 
     useTexture = false;
-    heightOffset = 0.1f;
+    heightOffset = 1.f;
     curveWidth = 1.0f;
     startPoint = glm::vec3(0. -(terrain->getSize()/2.),0.,0. -(terrain->getSize()/2.));
     endPoint = glm::vec3(terrain->getSize()/2., 0., terrain->getSize()/2.);
@@ -60,25 +68,20 @@ void Curve::initControlPoints() {
 
 void Curve::update() {
     curvePoints.clear();
-    updateControlPoints();
-    adjustControlPoints();
 
-/*
+    updateStartEndPoints();
+    
     switch (curveType) {
-        case BEZIER:
-            computeBezierCurve();
-            break;
         case CATMULL_ROM:
+            updateControlPoints();
+            adjustControlPoints();
             computeCatmullRomCurve();
             break;
-        case APPROXIMATION:
-            computeApproximationCurve(controlPoints.front(), controlPoints.back());
+        case ASTAR:
+            computeAStar();
             break;
     }
-    */
-
-    computeCatmullRomCurve();
-
+    
     applyHeightToCurve();
 
     glBindVertexArray(VAO);
@@ -92,14 +95,17 @@ void Curve::update() {
     glBindVertexArray(0);
 }
 
+void Curve::updateStartEndPoints(){
+    float sizePlanLimit = terrain->getSize() / 2.;
+    startPoint = glm::vec3(-sizePlanLimit, terrain->getHeightDataAt(-sizePlanLimit, -sizePlanLimit), -sizePlanLimit);
+    endPoint = glm::vec3(sizePlanLimit, terrain->getHeightDataAt(sizePlanLimit, sizePlanLimit), sizePlanLimit);
+}
+
 void Curve::updateControlPoints() {
     if (controlPoints.empty()) {
         initControlPoints();
         return;
     }
-
-    startPoint = glm::vec3(0. -(terrain->getSize()/2.),0.,0. -(terrain->getSize()/2.));
-    endPoint = glm::vec3(terrain->getSize()/2., 0., terrain->getSize()/2.);
 
     controlPoints[0] = startPoint;
     controlPoints[1] = startPoint;
@@ -222,13 +228,7 @@ void Curve::draw() {
     glUseProgram(0);
 }
 
-
-void Curve::computeBezierCurve() {
-    for (int i = 0; i <= terrain->getResolution(); ++i) {
-        float t = static_cast<float>(i) / terrain->getResolution();
-        curvePoints.push_back(deCasteljau(t));
-    }
-}
+// catmullRom fonctions
 
 void Curve::computeCatmullRomCurve() {
     for (size_t i = 0; i < controlPoints.size() - 3; ++i) {
@@ -239,30 +239,155 @@ void Curve::computeCatmullRomCurve() {
     }
 }
 
-void Curve::computeApproximationCurve(const glm::vec3& startPoint, const glm::vec3& endPoint) {
-    for (int i = 0; i <= terrain->getResolution(); ++i) {
-        float t = static_cast<float>(i) / terrain->getResolution();
-        glm::vec3 point = (1 - t) * startPoint + t * endPoint;
-        curvePoints.push_back(point);
-    }
-}
-
-glm::vec3 Curve::deCasteljau(float t) const {
-    std::vector<glm::vec3> points = controlPoints;
-    while (points.size() > 1) {
-        for (size_t i = 0; i < points.size() - 1; ++i) {
-            points[i] = (1 - t) * points[i] + t * points[i + 1];
-        }
-        points.pop_back();
-    }
-    return points[0];
-}
-
 glm::vec3 Curve::catmullRom(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) const {
     return 0.5f * ((2.0f * p1) +
                    (-p0 + p2) * t +
                    (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t * t +
                    (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t * t * t);
+}
+
+// A* fonctions
+
+float Curve::heuristic(const glm::vec3& current, const glm::vec3& goal) {
+    // Somme la différence de hauteur entre current et goal par saut de stepSize
+    float heuristicSum = 0.0f;
+    glm::vec3 direction = glm::normalize(goal - current);
+    glm::vec3 position = current;
+
+    float stepSize_local = Node::getStepSize();
+    float sizePlanLimit = terrain->getSize() / 2.0f;
+
+    //std::cout << current[0] << "," << current[1] << "," << current[2] << std::endl;
+
+    while (glm::distance(position, goal) > stepSize_local) {
+        glm::vec3 nextPosition = position + direction * stepSize_local;
+
+        if (std::abs(nextPosition.x) > sizePlanLimit || std::abs(nextPosition.z) > sizePlanLimit) {
+            break;
+        }
+
+        nextPosition.y = terrain->getHeightDataAt(nextPosition.x, nextPosition.z) * terrain->getHeightScale() + heightOffset;
+        heuristicSum += std::abs(nextPosition.y - position.y);
+
+        position = nextPosition;
+    }
+
+    return heuristicSum;
+}
+
+
+// Spécialisation de std::hash pour glm::vec3
+namespace std {
+    template <>
+    struct hash<glm::vec3> {
+        std::size_t operator()(const glm::vec3& v) const {
+            std::size_t h1 = std::hash<float>()(v.x);
+            std::size_t h2 = std::hash<float>()(v.y);
+            std::size_t h3 = std::hash<float>()(v.z);
+            return h1 ^ (h2 << 1) ^ (h3 << 2);
+        }
+    };
+}
+
+void Curve::computeAStar() {
+    std::cout << "Debut compute A*" << std::endl;
+
+    if (startPoint == endPoint) {
+        curvePoints = {startPoint};
+        return;
+    }
+
+    float sizePlanLimit = terrain->getSize() / 2.0f;
+    float stepSize_local = Node::getStepSize();
+
+    std::priority_queue<Node> openSet;
+    std::unordered_map<glm::vec3, Node*, std::hash<glm::vec3>> nodes;
+
+    Node* startNode = new Node(startPoint);
+    startNode->gScore = 0.0f;
+    startNode->hScore = heuristic(startPoint, endPoint);
+    startNode->fScore = startNode->hScore;
+
+    openSet.push(*startNode);
+    nodes[startPoint] = startNode;
+
+    Node* goalNode = nullptr;
+
+    while (!openSet.empty()) {
+        Node* current = new Node(openSet.top());
+        openSet.pop();
+
+        if (glm::distance(current->position, endPoint) < stepSize_local) {
+            current->position = endPoint;
+            goalNode = current;
+            break;
+        }
+
+        std::vector<glm::vec3> neighbors = getNeighbors(current->position);
+
+        for (const glm::vec3& neighborPos : neighbors) {
+            if (std::abs(neighborPos.x) > sizePlanLimit || std::abs(neighborPos.z) > sizePlanLimit) {
+                continue;
+            }
+
+            float tentative_gScore = current->gScore + glm::distance(current->position, neighborPos);
+
+            if (nodes.find(neighborPos) == nodes.end() || tentative_gScore < nodes[neighborPos]->gScore) {
+                Node* neighborNode = nodes[neighborPos];
+                if (!neighborNode) {
+                    neighborNode = new Node(neighborPos);
+                    nodes[neighborPos] = neighborNode;
+                }
+                neighborNode->parent = current;
+                neighborNode->gScore = tentative_gScore;
+                neighborNode->hScore = heuristic(neighborPos, endPoint);
+                neighborNode->fScore = neighborNode->gScore + neighborNode->hScore;
+
+                openSet.push(*neighborNode);
+            }
+        }
+    }
+
+    if (goalNode) {
+        curvePoints = reconstructPath(goalNode);
+    } else {
+        std::cerr << "Failed to find a path.\n";
+    }
+
+    for (auto& node : nodes) {
+        delete node.second;
+    }
+
+    std::cout << "Fin compute A*" << std::endl;
+}
+
+std::vector<glm::vec3> Curve::getNeighbors(const glm::vec3& position) {
+    std::vector<glm::vec3> neighbors;
+    float stepSize_local = Node::getStepSize();
+
+    for (float dx = -stepSize_local; dx <= stepSize_local; dx += stepSize_local) {
+        for (float dz = -stepSize_local; dz <= stepSize_local; dz += stepSize_local) {
+            if (dx == 0 && dz == 0) continue;
+            glm::vec3 neighborPos = position + glm::vec3(dx, 0.0f, dz);
+            neighborPos.y = terrain->getHeightDataAt(neighborPos.x, neighborPos.z) * terrain->getHeightScale() + heightOffset;
+            neighbors.push_back(neighborPos);
+        }
+    }
+
+    return neighbors;
+}
+
+std::vector<glm::vec3> Curve::reconstructPath(Node* goalNode) {
+    std::vector<glm::vec3> path;
+    Node* current = goalNode;
+
+    while (current != nullptr) {
+        path.push_back(current->position);
+        current = current->parent;
+    }
+
+    std::reverse(path.begin(), path.end());
+    return path;
 }
 
 void Curve::applyHeightToCurve() {
@@ -308,22 +433,21 @@ void Curve::showImGuiInterface() {
     ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Info courbe")) {
         ImGui::Text("Type de courbe");
-        ImGui::RadioButton("Bézier", reinterpret_cast<int*>(&curveType), BEZIER);
         ImGui::RadioButton("Catmull-Rom", reinterpret_cast<int*>(&curveType), CATMULL_ROM);
-        ImGui::RadioButton("Approximation", reinterpret_cast<int*>(&curveType), APPROXIMATION);
+        ImGui::RadioButton("A*", reinterpret_cast<int*>(&curveType), ASTAR);
 
-        ImGui::Separator();
-        ImGui::SliderFloat("Décalage hauteur", &heightOffset, 0.0f, 1.0f);
+        if(curveType == CATMULL_ROM){
+            // Parametres CATMULL_ROM
+            ImGui::Separator();
+            ImGui::Text("Parametres de la courbe");
+            ImGui::Checkbox("Afficher les points de controle", &showControlPoints);
 
-        ImGui::Separator();
-        ImGui::Checkbox("Afficher les points de controle", &showControlPoints);
+            ImGui::SliderInt("iteration", &iterationGradiant, 1, 15);
 
-        ImGui::Separator();
-        ImGui::SliderInt("iteration", &iterationGradiant, 1, 15);
+            if(ImGui::SliderInt("Nb de points de controle", &nbControlPoints, 4, 25)){
+                initControlPoints();
+            }
 
-        ImGui::Separator();
-        if(ImGui::SliderInt("Nb de points de controle", &nbControlPoints, 4, 25)){
-            initControlPoints();
         }
 
         ImGui::Separator();
@@ -393,44 +517,3 @@ void Curve::reloadShaders() {
     shaderProgram = LoadShaders("../shaders/curve_vertex_shader.glsl", "../shaders/curve_fragment_shader.glsl");
     update();
 }
-
-void Curve::initControlPointsFromTerrain() {
-    controlPoints.clear();
-    const std::vector<float>& terrainVertices = terrain->getVertices();
-
-    //utiliser les sommets d'une ligne (fixer z et itérer sur x)
-    int terrainResolution = terrain->getResolution();
-    for (int x = 0; x < terrainResolution; ++x) {
-        int vertexIndex = (x + (terrainResolution / 2) * terrainResolution) * 3; // Indice dans le tableau
-        if (vertexIndex + 2 < terrainVertices.size()) {
-            glm::vec3 point(
-                terrainVertices[vertexIndex],     // x
-                terrainVertices[vertexIndex + 1], // y
-                terrainVertices[vertexIndex + 2]  // z
-            );
-            controlPoints.push_back(point);
-        }
-    }
-}
-
-void Curve::addPointForWidth() {
-    std::vector<glm::vec3> widenedCurvePoints;
-
-    for (size_t i = 0; i < curvePoints.size(); ++i) {
-        glm::vec3 currentPoint = curvePoints[i];
-        glm::vec3 nextPoint = (i < curvePoints.size() - 1) ? curvePoints[i + 1] : curvePoints[i - 1];
-        glm::vec3 tangent = glm::normalize(nextPoint - currentPoint);
-        glm::vec3 normal = glm::normalize(glm::cross(tangent, glm::vec3(0.0f, 1.0f, 0.0f)));
-
-        glm::vec3 leftPoint = currentPoint - normal * (curveWidth * 0.5f);
-        glm::vec3 rightPoint = currentPoint + normal * (curveWidth * 0.5f);
-
-        widenedCurvePoints.push_back(leftPoint);
-        widenedCurvePoints.push_back(rightPoint);
-    }
-
-    curvePoints = widenedCurvePoints;
-}
-
-
-

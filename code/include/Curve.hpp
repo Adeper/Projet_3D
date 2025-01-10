@@ -7,18 +7,47 @@
 #include <Noise.hpp>
 #include <string>
 #include <vector>
+#include <limits>
 
 // Include GLM
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+// structure node pour A*
+struct Node {
+    glm::vec3 position;
+    float gScore;
+    float hScore;
+    float fScore;
+    Node* parent;
+
+    static float stepSize;
+
+    Node(const glm::vec3& pos)
+        : position(pos), gScore(std::numeric_limits<float>::infinity()),
+          hScore(std::numeric_limits<float>::infinity()),
+          fScore(std::numeric_limits<float>::infinity()),
+          parent(nullptr) {}
+
+    bool operator<(const Node& other) const {
+        return fScore > other.fScore;
+    }
+
+    static void setStepSize(float newStepSize){
+        stepSize = newStepSize;
+    }
+
+    static float getStepSize(){
+        return stepSize;
+    }
+};
+
 class Curve {
 public:
     enum CurveType {
-        BEZIER,
         CATMULL_ROM,
-        APPROXIMATION
+        ASTAR
     };
 
     Curve(PlaneLOD* terrain, Noise* noise);
@@ -54,18 +83,23 @@ private:
     GLuint textureID;                      // Texture de la courbe
     float heightOffset;                    // Décalage pour éviter l'interpénétration
 
-    void initControlPointsFromTerrain();
     void initControlPoints();
 
+    void updateStartEndPoints();
     void updateControlPoints();
     void adjustControlPoints();
     void loadSphere(const std::string& filePath);
     void drawControlPoints();
 
-    // Méthodes spécifiques aux types de courbes
-    void computeBezierCurve();
+    // catmullRom fonctions
     void computeCatmullRomCurve();
-    void computeApproximationCurve(const glm::vec3& startPoint, const glm::vec3& endPoint);
+    glm::vec3 catmullRom(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) const;
+
+    // A* fonctions
+    float heuristic(const glm::vec3& current, const glm::vec3& goal);
+    void computeAStar();
+    std::vector<glm::vec3> getNeighbors(const glm::vec3& position);
+    std::vector<glm::vec3> reconstructPath(Node* goalNode);
 
     // Helper pour appliquer la hauteur depuis le terrain
     void applyHeightToCurve();
@@ -73,13 +107,9 @@ private:
     // Helper pour apliquer le bruit à la courbe
     void applyNoiseToCurve();
 
-    glm::vec3 deCasteljau(float t) const;  // Algorithme pour Bézier
-    glm::vec3 catmullRom(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) const;
 
     void reloadShaders();
     void loadTexture(const std::string& path);
-
-    void addPointForWidth();
 };
 
 #endif
