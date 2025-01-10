@@ -441,8 +441,6 @@ void Curve::showImGuiInterface() {
         ImGui::RadioButton("Catmull-Rom", reinterpret_cast<int*>(&curveType), CATMULL_ROM);
         ImGui::RadioButton("A*", reinterpret_cast<int*>(&curveType), ASTAR);
 
-        ImGui::Text("Position des points");
-
         glm::vec2 startPoint2D = {startPoint.x, startPoint.z};
         glm::vec2 endPoint2D = {endPoint.x, endPoint.z};
         ImVec2 min(-terrain->getSize() / 2.0f, -terrain->getSize() / 2.0f);
@@ -450,7 +448,7 @@ void Curve::showImGuiInterface() {
         ImVec2 startPointImGui(startPoint2D.x, startPoint2D.y);
         ImVec2 endPointImGui(endPoint2D.x, endPoint2D.y);
 
-        Draw2DSliderWithMultiplePoints("Points de départ et d'arrivée", startPointImGui, endPointImGui, ImVec2(150, 150), min, max);
+        Draw2DSliderWithMultiplePoints("Position des points", startPointImGui, endPointImGui, ImVec2(150, 150), min, max);
 
         startPoint.x = startPointImGui.x;
         startPoint.z = startPointImGui.y;
