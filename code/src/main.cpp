@@ -27,7 +27,6 @@ GLFWwindow* window;
 #include <Skybox.hpp>
 #include <PlaneLOD.hpp>
 #include <Noise.hpp>
-#include <BezierCurve.hpp>
 #include <Curve.hpp>
 #include <Globals.hpp>
 
