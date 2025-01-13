@@ -10,12 +10,25 @@ cd code
 
 Étape 1 :
 Pour compiler :
+
+Sur Linux
 ```console
-sh compile.sh
+sh compile_linux.sh
+```
+Sur Windows
+```console
+sh compile_windows.sh
 ```
 
 Étape 2 :
 Pour exécuter :
+
+Sur Linux
 ```console
-sh launch.sh
+sh launch_linux.sh
+```
+
+Sur Windows
+```console
+sh launch_windows.sh
 ```
