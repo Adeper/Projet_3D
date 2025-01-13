@@ -80,8 +80,11 @@ private:
     std::vector<unsigned short> sphereFaces;
     bool sphereLoaded;                     // Booléen pour vérifier si la sphère est chargée
     bool useTexture;                       // Utilisation d'une texture
+    bool showRoad;
     GLuint textureID;                      // Texture de la courbe
     float heightOffset;                    // Décalage pour éviter l'interpénétration
+    float heightWeight;
+    
 
     void initControlPoints();
 
@@ -90,6 +93,7 @@ private:
     void adjustControlPoints();
     void loadSphere(const std::string& filePath);
     void drawControlPoints();
+    void drawRoad();
 
     // catmullRom fonctions
     void computeCatmullRomCurve();
@@ -103,6 +107,7 @@ private:
 
     // Helper pour appliquer la hauteur depuis le terrain
     void applyHeightToCurve();
+    float getHeightForDrawAtCoord(const float x, const float z);
 
     // Helper pour apliquer le bruit à la courbe
     void applyNoiseToCurve();

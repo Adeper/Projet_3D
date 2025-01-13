@@ -26,7 +26,14 @@ PlaneLOD::PlaneLOD(float new_size, unsigned int new_resolution, Camera* cam) {
 
     createPlaneVAO();
 
-    m_shaderProgram = LoadShadersV2("../shaders/vertex_shader.glsl", "../shaders/fragment_shader.glsl", "../tesselation_shaders/tess_control_shader.glsl", "../tesselation_shaders/tess_eval_shader.glsl", nullptr);
+    useTesselation = false; // changer ici pour tesselation shader ou non;
+
+    if(useTesselation){
+        m_shaderProgram = LoadShadersV2("../shaders/vertex_shader_tess.glsl", "../shaders/fragment_shader_tess.glsl", "../tesselation_shaders/tess_control_shader.glsl", "../tesselation_shaders/tess_eval_shader.glsl", nullptr);
+    }else{
+        m_shaderProgram = LoadShaders("../shaders/vertex_shader.glsl", "../shaders/fragment_shader.glsl", "../shaders/lod_geometry_shader.glsl");
+    }
+
     m_normalShaderProgram = LoadShaders("../shaders/normal_vertex_shader.glsl", "../shaders/normal_fragment_shader.glsl", "../shaders/normal_geometry_shader.glsl");
 
     m_grassTextureID = loadTexture("../textures/grass.png");
@@ -47,7 +54,15 @@ PlaneLOD::~PlaneLOD() {
     glDeleteTextures(1, &m_textureID);
 }
 
-void PlaneLOD::draw() {
+void PlaneLOD::draw(){
+    if(useTesselation){
+        drawWithTesselationShader();
+    }else{
+        drawWithGeometryShader();
+    }
+}
+
+void PlaneLOD::drawWithTesselationShader() {
 
     glUseProgram(m_shaderProgram);
 
@@ -61,11 +76,6 @@ void PlaneLOD::draw() {
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
-
-    // Hauteur et texture du heightMap
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
-    glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
 
     // Lier les textures pour herbe, rocher et neige
     glActiveTexture(GL_TEXTURE1);
@@ -81,6 +91,11 @@ void PlaneLOD::draw() {
     glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
 
     glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
+
+    // Hauteur et texture du heightMap
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
 
     // Transmettre la position de la caméra
     glm::vec3 cameraPos = camera_plan->getPosition(); // Récupérer la position de la caméra
@@ -146,6 +161,77 @@ void PlaneLOD::draw() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+
+void PlaneLOD::drawWithGeometryShader() {
+
+    glUseProgram(m_shaderProgram);
+
+    // Matrices de transformation
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    const glm::mat4& viewMatrix = camera_plan->getViewMatrix();
+    const glm::mat4& projectionMatrix = camera_plan->getProjectionMatrix();
+
+    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "model"), 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
+
+
+    // Lier les textures pour herbe, rocher et neige
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_grassTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "grassTexture"), 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, m_rockTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "rockTexture"), 2);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, m_snowTextureID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "snowTexture"), 3);
+
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "heightScale"), heightScale);
+
+    // Hauteur et texture du heightMap
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_heightMapID);
+    glUniform1i(glGetUniformLocation(m_shaderProgram, "heightMap"), 0);
+
+    // Transmettre la position de la caméra
+    glm::vec3 cameraPos = camera_plan->getPosition(); // Récupérer la position de la caméra
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "cameraPosition"), cameraPos.x, cameraPos.y, cameraPos.z);
+
+    // Transmettre la distance maximale du LOD
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "lodDistance"), maxLodDistance);
+
+    //Transmettre les limites de mon truc
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "grassLimit"), grassLimit);
+    glUniform1f(glGetUniformLocation(m_shaderProgram, "rockLimit"), rockLimit);
+    
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "color_Mesh"), color.r, color.g, color.b);
+
+    // Les lights
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightDirection"), lightDirection.r, lightDirection.g, lightDirection.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "lightColor"), lightColor.r, lightColor.g, lightColor.b);
+    glUniform3f(glGetUniformLocation(m_shaderProgram, "ambientColor"), ambientColor.r, ambientColor.g, ambientColor.b);
+
+    //glBindTexture(GL_TEXTURE_2D, m_textureID);
+
+    if(displayWire)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else if(displayPoint)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    else
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Dessiner les triangles
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
+    // Réinitialiser le mode de polygone
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
 // == DEBUG : Affiche normales == //
 void PlaneLOD::drawNormals(){
     glUseProgram(m_normalShaderProgram);
@@ -316,6 +402,11 @@ void PlaneLOD::showImGuiInterface() {
         ImGui::Text(" === Lumière ===");
         ImGui::SliderFloat("Angle rotation", &lightRotationAngle, -180.0f, 180.0f);
 
+        if(ImGui::Checkbox("Utiliser les tesselation", &useTesselation)){
+            reloadShaders();
+            recreatePlane();
+        }
+
         if (ImGui::Button("Reload Shaders")) {
             reloadShaders();
             recreatePlane();
@@ -344,13 +435,21 @@ void PlaneLOD::reloadShaders() {
     glDeleteProgram(m_shaderProgram);
     glDeleteProgram(m_normalShaderProgram);
 
-    m_shaderProgram = LoadShadersV2(
-        "../shaders/vertex_shader.glsl", 
-        "../shaders/fragment_shader.glsl", 
-        "../tesselation_shaders/tess_control_shader.glsl", 
-        "../tesselation_shaders/tess_eval_shader.glsl", 
-        nullptr
-    );
+    if(useTesselation){
+        m_shaderProgram = LoadShadersV2(
+            "../shaders/vertex_shader_tess.glsl", 
+            "../shaders/fragment_shader_tess.glsl", 
+            "../tesselation_shaders/tess_control_shader.glsl", 
+            "../tesselation_shaders/tess_eval_shader.glsl", 
+            nullptr
+        );
+    }else{
+        m_shaderProgram = LoadShaders(
+            "../shaders/vertex_shader.glsl",
+            "../shaders/fragment_shader.glsl",
+            "../shaders/lod_geometry_shader.glsl"
+        );
+    }
 
     m_normalShaderProgram = LoadShaders(
         "../shaders/normal_vertex_shader.glsl", 
@@ -361,6 +460,10 @@ void PlaneLOD::reloadShaders() {
     std::cout << "Shaders reloaded successfully!" << std::endl;
 }
 
+
+bool PlaneLOD::getUseTesselation() const{
+    return useTesselation;
+}
 
 void PlaneLOD::initLight(){
     lightDirection = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -404,6 +507,11 @@ int PlaneLOD::getMorphFactor() const{
 int PlaneLOD::getMorphDistance() const{
     return morphDistance;
 }
+
+GLuint PlaneLOD::getHeightMap() const{
+    return m_heightMapID;
+}
+
 void PlaneLOD::setHeight() {
     if (m_heightMapID == 0) {
         std::cerr << "Height map ID invalide!" << std::endl;

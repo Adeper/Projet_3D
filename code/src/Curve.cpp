@@ -21,7 +21,8 @@ Curve::Curve(PlaneLOD* terrain, Noise* noise)
     color = glm::vec3(1.0f, 0.0f, 0.0f);
     showControlPoints = false; 
     useTexture = false;
-    heightOffset = 1.f;
+    showRoad = false;
+    heightOffset = 0.f;
     curveWidth = 1.0f;
     startPoint = glm::vec3(0. -(terrain->getSize()/2.),0.,0. -(terrain->getSize()/2.));
     endPoint = glm::vec3(terrain->getSize()/2., 0., terrain->getSize()/2.);
@@ -31,7 +32,11 @@ Curve::Curve(PlaneLOD* terrain, Noise* noise)
     GLuint sphereVAO = 0;
     GLuint sphereVBO = 0;
     loadSphere("../data/sphere.off");
+    loadTexture("../textures/route_pierre.jpg");
     initControlPoints();
+
+    // pour A*
+    heightWeight = 2.0f;
 }
 
 Curve::~Curve() {
@@ -83,6 +88,12 @@ void Curve::update() {
     }
     
     applyHeightToCurve();
+
+    if(terrain->getUseTesselation()){
+        heightOffset = 1.f;
+    }else{
+        heightOffset = 0.f;
+    }
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -209,24 +220,129 @@ void Curve::draw() {
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, &projMatrix[0][0]);
 
-    if (useTexture) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glUniform1i(glGetUniformLocation(shaderProgram, "curveTexture"), 0);
-        glUniform1i(glGetUniformLocation(shaderProgram, "useTexture"), 1);
-    } else {
-        glUniform1i(glGetUniformLocation(shaderProgram, "useTexture"), 0);
-        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, &color[0]);
-    }
+    glUniform1i(glGetUniformLocation(shaderProgram, "showRoad"), showRoad);
+
+    glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, &color[0]);
 
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINE_STRIP, 0, curvePoints.size());
     glBindVertexArray(0);
 
     drawControlPoints();
+    drawRoad();
 
     glUseProgram(0);
 }
+
+void Curve::drawRoad() {
+    if (!showRoad) return;
+
+    glBindVertexArray(VAO);
+    glUseProgram(shaderProgram);
+
+    
+
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glUniform1i(glGetUniformLocation(shaderProgram, "curveTexture"), 5);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, terrain->getHeightMap());
+    glUniform1i(glGetUniformLocation(shaderProgram, "heightMap"), 0);
+
+    for (size_t i = 0; i < curvePoints.size() - 1; ++i) {
+        glm::vec3 p1 = curvePoints[i];
+        glm::vec3 p2 = curvePoints[i + 1];
+
+        glm::vec3 direction = glm::normalize(glm::vec3(p2.x,0.,p2.z) - glm::vec3(p1.x,0.,p1.z));
+        glm::vec3 perpendicular = glm::vec3(-direction.z, 0.0f, direction.x);
+
+        float width = 1./10.;
+
+        glm::vec3 bottomLeft = p1 - perpendicular * width;
+        bottomLeft.y = getHeightForDrawAtCoord(bottomLeft.x, bottomLeft.z);
+        if (fabs(bottomLeft.y - p1.y) > width) { // Limitation en hauteur
+            if (bottomLeft.y > p1.y) {
+                bottomLeft.y = p1.y + width;
+            } else {
+                bottomLeft.y = p1.y - width;
+            }
+        }
+
+        glm::vec3 bottomRight = p1 + perpendicular * width;
+        bottomRight.y = getHeightForDrawAtCoord(bottomRight.x, bottomRight.z);
+        if (fabs(bottomRight.y - p1.y) > width) { // Limitation en hauteur
+            if (bottomRight.y > p1.y) {
+                bottomRight.y = p1.y + width;
+            } else {
+                bottomRight.y = p1.y - width;
+            }
+        }
+
+        glm::vec3 topLeft = p2 - perpendicular * width;
+        topLeft.y = getHeightForDrawAtCoord(topLeft.x, topLeft.z);
+        if (fabs(topLeft.y - p2.y) > width) { // Limitation en hauteur
+            if (topLeft.y > p2.y) {
+                topLeft.y = p2.y + width;
+            } else {
+                topLeft.y = p2.y - width;
+            }
+        }
+
+        glm::vec3 topRight = p2 + perpendicular * width;
+        topRight.y = getHeightForDrawAtCoord(topRight.x, topRight.z);
+        if (fabs(topRight.y - p2.y) > width) { // Limitation en hauteur
+            if (topRight.y > p2.y) {
+                topRight.y = p2.y + width;
+            } else {
+                topRight.y = p2.y - width;
+            }
+        }
+
+        /*glm::vec3 bottomLeft = glm::vec3(p1.x - perpendicular.x * width, getHeightForDrawAtCoord(p1.x - perpendicular.x * width, p1.z - perpendicular.z * width), p1.z - perpendicular.z * width);
+        glm::vec3 bottomRight = glm::vec3(p1.x + perpendicular.x * width, getHeightForDrawAtCoord(p1.x + perpendicular.x * width, p1.z + perpendicular.z * width), p1.z + perpendicular.z * width);
+        glm::vec3 topLeft = glm::vec3(p2.x - perpendicular.x * width, getHeightForDrawAtCoord(p2.x - perpendicular.x * width, p2.z - perpendicular.z * width), p2.z - perpendicular.z * width);
+        glm::vec3 topRight = glm::vec3(p2.x + perpendicular.x * width, getHeightForDrawAtCoord(p2.x + perpendicular.x * width, p2.z + perpendicular.z * width), p2.z + perpendicular.z * width);
+*/
+        glm::vec3 vertices[6] = {
+            bottomLeft, bottomRight, topRight,
+            bottomLeft, topRight, topLeft
+        };
+
+        float length = glm::distance(p2, p1);
+
+        glm::vec2 uvs[6] = {
+            glm::vec2(0.0f, 0.0f),        glm::vec2(1.0f, 0.0f),        glm::vec2(1.0f, length),
+            glm::vec2(0.0f, 0.0f),        glm::vec2(1.0f, length),      glm::vec2(0.0f, length)
+        };
+
+
+        GLuint VBO, UVBO;
+        glGenBuffers(1, &VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+        glGenBuffers(1, &UVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, UVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, UVBO);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &UVBO);
+    }
+
+    glBindVertexArray(0);
+}
+
 
 // catmullRom fonctions
 
@@ -257,8 +373,6 @@ float Curve::heuristic(const glm::vec3& current, const glm::vec3& goal) {
     float stepSize_local = Node::getStepSize();
     float sizePlanLimit = terrain->getSize() / 2.0f;
 
-    float heightWeight = 2.0f;
-
     while (glm::distance(position, goal) > stepSize_local) {
         glm::vec3 nextPosition = position + direction * stepSize_local;
 
@@ -266,7 +380,7 @@ float Curve::heuristic(const glm::vec3& current, const glm::vec3& goal) {
             break;
         }
 
-        nextPosition.y = terrain->getHeightDataAt(nextPosition.x, nextPosition.z) * terrain->getHeightScale() + heightOffset;
+        nextPosition.y = terrain->getHeightDataAt(nextPosition.x, nextPosition.z);
 
         float horizontalDistance = glm::distance(glm::vec2(position.x, position.z), glm::vec2(nextPosition.x, nextPosition.z));
         float verticalDistance = std::abs(nextPosition.y - position.y) * heightWeight;
@@ -295,7 +409,6 @@ namespace std {
 }
 
 void Curve::computeAStar() {
-    std::cout << "Debut compute A*" << std::endl;
 
     if (startPoint == endPoint) {
         curvePoints = {startPoint};
@@ -363,7 +476,6 @@ void Curve::computeAStar() {
         delete node.second;
     }
 
-    std::cout << "Fin compute A*" << std::endl;
 }
 
 std::vector<glm::vec3> Curve::getNeighbors(const glm::vec3& position) {
@@ -374,7 +486,7 @@ std::vector<glm::vec3> Curve::getNeighbors(const glm::vec3& position) {
         for (float dz = -stepSize_local; dz <= stepSize_local; dz += stepSize_local) {
             if (dx == 0 && dz == 0) continue;
             glm::vec3 neighborPos = position + glm::vec3(dx, 0.0f, dz);
-            neighborPos.y = terrain->getHeightDataAt(neighborPos.x, neighborPos.z) * terrain->getHeightScale() + heightOffset;
+            neighborPos.y = terrain->getHeightDataAt(neighborPos.x, neighborPos.z);
             neighbors.push_back(neighborPos);
         }
     }
@@ -399,6 +511,10 @@ void Curve::applyHeightToCurve() {
     for (auto& point : curvePoints) {
         point.y = terrain->getHeightDataAt(point.x, point.z) * terrain->getHeightScale() + heightOffset;
     }
+}
+
+float Curve::getHeightForDrawAtCoord(const float x, const float z){
+    return terrain->getHeightDataAt(x, z) * terrain->getHeightScale() + heightOffset;
 }
 
 void Curve::applyNoiseToCurve() {
@@ -458,13 +574,17 @@ void Curve::showImGuiInterface() {
         endPoint.z = endPointImGui.y;
         endPoint.y = terrain->getHeightDataAt(endPoint.x, endPoint.z);
 
-
+        if(ImGui::Checkbox("Afficher le chemin", &showRoad)){
+            showControlPoints = false;
+        }
 
         if(curveType == CATMULL_ROM){
             // Parametres CATMULL_ROM
             ImGui::Separator();
             ImGui::Text("Parametres de la courbe");
-            ImGui::Checkbox("Afficher les points de controle", &showControlPoints);
+            if(ImGui::Checkbox("Afficher les points de controle", &showControlPoints)){
+                showRoad = false;
+            }
 
             ImGui::SliderInt("iteration", &iterationGradiant, 1, 15);
 
@@ -472,18 +592,13 @@ void Curve::showImGuiInterface() {
                 initControlPoints();
             }
 
+        }else if(curveType == ASTAR){
+            ImGui::SliderFloat("Poids de la hauteur", &heightWeight, 1.f, 20.0f);
         }
 
         ImGui::Separator();
         ImGui::ColorEdit3("Couleur", &color[0]);
-        ImGui::Checkbox("Charger une texture", &useTexture);
-        if (useTexture) {
-            try {
-                loadTexture(std::string("../textures/road.jpg"));
-            } catch (const std::exception& e) {
-                std::cerr << "Erreur : " << e.what() << std::endl;
-            }
-        }
+        
 
         ImGui::Separator();
         // DEBUG
@@ -600,11 +715,22 @@ void Curve::loadTexture(const std::string &path) {
     unsigned char *data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
 
     if (!data) {
-        stbi_image_free(data);
+        std::cerr << "Erreur lors du chargement de l'image : " << path << std::endl;
         throw std::runtime_error("Erreur lors du chargement des textures: " + path);
     }
 
-    GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+    GLenum format;
+    if (nrChannels == 1)
+        format = GL_RED;
+    else if (nrChannels == 3)
+        format = GL_RGB;
+    else if (nrChannels == 4)
+        format = GL_RGBA;
+    else {
+        stbi_image_free(data);
+        throw std::runtime_error("Format d'image non supporté: " + path);
+    }
+
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -615,9 +741,12 @@ void Curve::loadTexture(const std::string &path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    useTexture = true;
+    std::cout << "Texture chargée avec succès : " << path << " ("
+              << width << "x" << height << ", " << nrChannels << " canaux)" << std::endl;
 
+    useTexture = true;
 }
+
 
 void Curve::reloadShaders() {
     glDeleteProgram(shaderProgram);

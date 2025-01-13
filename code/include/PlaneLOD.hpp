@@ -33,6 +33,8 @@ public:
 
     void setHeightMap(GLuint heightMapID);
     GLuint getHeightMap() const;
+    bool getUseTesselation() const;
+
     void showImGuiInterface();
 
     void recreatePlane();
@@ -46,15 +48,18 @@ public:
 
     const std::vector<float>& getVertices() const;
 
+    GLuint loadTexture(const std::string &path);
 
 private:
     void createPlaneVAO();
-    GLuint loadTexture(const std::string &path);
     void updateSize(float newSize);
     void updateResolution(unsigned int newResolution);
     void initLight();
     void updateLightRotation();
     void reloadShaders();
+
+    void drawWithGeometryShader();
+    void drawWithTesselationShader();
     
 
     Camera* camera_plan; 
@@ -76,6 +81,7 @@ private:
     bool displayWire;
     bool displayPoint;
     bool showNormals;
+    bool useTesselation;
 
     GLuint VAO, VBO, EBO, UVBO, NBO, lodFBO, lodTexture, IDBO;
 

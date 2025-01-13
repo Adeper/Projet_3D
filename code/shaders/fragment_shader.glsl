@@ -1,50 +1,56 @@
-#version 430 core
+#version 330 core
 
-in vec3 tesFragPos; // Position du TES
-in vec3 tesNormal;  // Normale du TES
-in vec2 tesUV;      // Coordonnées UV depuis le TES
+in vec3 outFragPos;
+in vec2 outUV;           // Coordonnées outUV
+in vec3 outNormal;
+in float outHeight;      // Hauteur interpolée depuis le vertex shader
 
-out vec4 color;
+out vec4 FragColor;
 
 uniform vec3 lightDirection;
 uniform vec3 lightColor;
 
-uniform sampler2D heightMap;   // Heightmap pour la hauteur
-uniform sampler2D grassTexture; // Texture pour l'herbe
-uniform sampler2D rockTexture;  // Texture pour les rochers
-uniform sampler2D snowTexture;  // Texture pour la neige
+uniform vec3 ambientColor;
+uniform vec3 color_Mesh;
 
-uniform float grassLimit;      // Limite supérieure de l'herbe
-uniform float rockLimit;       // Limite supérieure des rochers (limite inférieure pour la neige)
+uniform sampler2D heightMap;
+uniform sampler2D grassTexture;  // Texture pour les herbes
+uniform sampler2D rockTexture;   // Texture pour les rochers
+uniform sampler2D snowTexture;   // Texture pour la neige
+
+uniform float heightScale;
+
+uniform float grassLimit;
+uniform float rockLimit;
 
 void main() {
-    // Normalisation de la normale
-    vec3 norm = normalize(tesNormal);
 
-    // Calcul de la hauteur normale à partir de la heightmap
-    float height = texture(heightMap, tesUV).r;
+    vec3 norm = normalize(outNormal);
+    vec3 lightDir = normalize(-lightDirection);
 
-    // Déterminer les poids pour chaque type de texture
-    float grassWeight = clamp(1.0 - height / grassLimit, 0.0, 1.0);
-    float rockWeight = clamp((height - grassLimit) / (rockLimit - grassLimit), 0.0, 1.0);
-    float snowWeight = clamp((height - rockLimit) / (1.0 - rockLimit), 0.0, 1.0);
-
-    // Charger les couleurs des textures
-    vec3 grassColor = texture(grassTexture, tesUV).rgb;
-    vec3 rockColor = texture(rockTexture, tesUV).rgb;
-    vec3 snowColor = texture(snowTexture, tesUV).rgb;
-
-    // Mélanger les textures en fonction des poids
-    vec3 blendedColor = grassColor * grassWeight +
-                        rockColor * rockWeight +
-                        snowColor * snowWeight;
-
-    // Calcul de l'éclairage directionnel
-    float diff = max(dot(norm, normalize(lightDirection)), 0.0);
+    // Composante diffuse
+    float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
 
-    // Appliquer l'éclairage sur la couleur mélangée
-    vec3 finalColor = diffuse * blendedColor;
+    // Composante ambiante
+    vec3 ambient = ambientColor * lightColor;
 
-    color = vec4(finalColor, 1.0);
+    vec4 grassColor = texture(grassTexture, outUV);
+    vec4 rockColor = texture(rockTexture, outUV);
+    vec4 snowColor = texture(snowTexture, outUV);
+    
+    vec4 terrainColor;
+    if (outHeight < grassLimit * heightScale) {
+        terrainColor = grassColor;
+    } else if (outHeight < rockLimit * heightScale) {
+        float t = ((outHeight/heightScale) - grassLimit) / (rockLimit - grassLimit);
+        terrainColor = mix(grassColor, rockColor, t);
+    } else {
+        float t = ((outHeight/heightScale) - rockLimit) / (1.0 - rockLimit);
+        terrainColor = mix(rockColor, snowColor, t);
+    }
+
+    vec4 finalColor = vec4(terrainColor.rgb * (ambient + diffuse), terrainColor.a);
+    FragColor = finalColor /** vec4(color_Mesh, 1.0)*/;
+
 }
